@@ -247,6 +247,132 @@ struct Cheat
 
 char inputButtons[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+void DECOMP_MM_Cheat_MaxWumpa(void)
+{
+	sdata->gGT->gameMode2 |= CHEAT_WUMPA;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_UnlockRoo(void)
+{
+	sdata->gameProgress.unlocks[0] |= 0x80;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_UnlockPapu(void)
+{
+	sdata->gameProgress.unlocks[0] |= 0x100;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_UnlockJoe(void)
+{
+	sdata->gameProgress.unlocks[0] |= 0x200;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_UnlockPinstripe(void)
+{
+	sdata->gameProgress.unlocks[0] |= 0x400;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_UnlockFakeCrash(void)
+{
+	sdata->gameProgress.unlocks[0] |= 0x800;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_UnlockPenta(void)
+{
+	sdata->gameProgress.unlocks[0] |= 0x40;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_UnlockTropy(void)
+{
+	sdata->gameProgress.unlocks[0] |= 0x20;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_UnlockScrapbook(void)
+{
+	sdata->gameProgress.unlocks[1] |= 0x10;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_UnlockTracks(void)
+{
+	sdata->gameProgress.unlocks[0] |= 0x1e;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_InfiniteMasks(void)
+{
+	sdata->gGT->gameMode2 |= CHEAT_MASK;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_MaxTurbos(void)
+{
+	sdata->gGT->gameMode2 |= CHEAT_TURBO;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_MaxInvisibility(void)
+{
+	sdata->gGT->gameMode2 |= CHEAT_INVISIBLE;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_MaxEngine(void)
+{
+	sdata->gGT->gameMode2 |= CHEAT_ENGINE;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_MaxBombs(void)
+{
+	sdata->gGT->gameMode2 |= CHEAT_BOMBS;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_AdvDifficulty(void)
+{
+	sdata->gGT->gameMode2 |= CHEAT_ADV;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_SuperHard(void)
+{
+	sdata->gGT->gameMode2 |= CHEAT_SUPERHARD;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_IcyTracks(void)
+{
+	sdata->gGT->gameMode2 |= CHEAT_ICY;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_SuperTurboPads(void)
+{
+	sdata->gGT->gameMode2 |= CHEAT_TURBOPAD;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_OneLap(void)
+{
+	sdata->gGT->gameMode2 |= CHEAT_ONELAP;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
+void DECOMP_MM_Cheat_TurboCounter(void)
+{
+	sdata->gGT->gameMode2 |= CHEAT_TURBOCOUNT;
+	DECOMP_OtherFX_Play(0x67, 1);
+}
+
 void DECOMP_MM_ParseCheatCodes()
 {
 	int i;
