@@ -309,7 +309,7 @@ extern struct
 	char script_tawnaNormal[0x28];
 
 	// 800b17dc
-	char script_tawnaCredits[0xC4C];
+	char script_tawnaCredits[0x164c];
 
 	// 800b2e28
 	char script_default[0x18];
@@ -320,12 +320,14 @@ extern struct
 	// 800b2e78
 	char *danceFirstScripts[0x10];
 
-	char fill3_betweenDanceScripts[0x1CD4];
+	// 800b2eb8
+	char danceOtherOpcodeData[0x12d4];
 
 	// 800b418c
 	char *danceOtherScripts[0x10];
 
-	char fill3_beforeIntroModelScripts[0x3B0];
+	// 800b41cc
+	char introModelOpcodeData[0x3b0];
 
 	// 800b457c
 	char *introModelScripts[0x10];
@@ -366,7 +368,10 @@ extern struct
 	// NOTE(aalhendi): Retail PTR_DAT_800b5024_800b5b48.
 	char *advCharSelectDeselectOpcodes[8];
 
-	char fill3_beforeInitMatrixTable[0x17c8];
+	char fill3_afterAdvCharSelect[0x8];
+
+	// 800b5b70
+	char cs_initMatrixData[0x17c0];
 
 	// 800b7330
 	// NOTE(aalhendi): Retail PTR_DAT_800b5b70_800b7330.
@@ -420,6 +425,63 @@ extern struct
 	// 800b7780
 
 } OVR_233;
+
+// NOTE(aalhendi): Layout-verified for live overlay-233 references used by the audited cutscene thread path.
+// Retail base is NTSC-U 926 0x800ab9f0.
+#define OVR233_LAYOUT_ASSERT(ELEMENT, OFFSET, SIZE)                 \
+	_Static_assert(OFFSETOF(typeof(OVR_233), ELEMENT) == (OFFSET)); \
+	_Static_assert(sizeof(((typeof(OVR_233) *)0)->ELEMENT) == (SIZE))
+
+_Static_assert(sizeof(void *) == 4);
+OVR233_LAYOUT_ASSERT(s_spawn, 0x4, 0x8);
+OVR233_LAYOUT_ASSERT(s_g_dancer, 0xc, 0x10);
+OVR233_LAYOUT_ASSERT(s_introguy, 0x328, 0xc);
+OVR233_LAYOUT_ASSERT(s_introcam, 0x334, 0xc);
+OVR233_LAYOUT_ASSERT(VertSplitLine, 0x518c, 0x4);
+OVR233_LAYOUT_ASSERT(boolLoadNextSwap, 0x5190, 0x4);
+OVR233_LAYOUT_ASSERT(boolStartToSkip, 0x5194, 0x4);
+OVR233_LAYOUT_ASSERT(bossCutsceneIndex, 0x5198, 0x4);
+OVR233_LAYOUT_ASSERT(CutsceneManipulatesAudio, 0x519c, 0x4);
+OVR233_LAYOUT_ASSERT(whateverThisMeans, 0x51a0, 0x78);
+OVR233_LAYOUT_ASSERT(pointerToWhateverThisMeans, 0x5a7c, 0x78);
+OVR233_LAYOUT_ASSERT(script_tawnaNormal, 0x5dc4, 0x28);
+OVR233_LAYOUT_ASSERT(script_tawnaCredits, 0x5dec, 0x164c);
+OVR233_LAYOUT_ASSERT(script_default, 0x7438, 0x18);
+OVR233_LAYOUT_ASSERT(script_dingofire, 0x7450, 0x38);
+OVR233_LAYOUT_ASSERT(danceFirstScripts, 0x7488, 0x40);
+OVR233_LAYOUT_ASSERT(danceOtherOpcodeData, 0x74c8, 0x12d4);
+OVR233_LAYOUT_ASSERT(danceOtherScripts, 0x879c, 0x40);
+OVR233_LAYOUT_ASSERT(introModelOpcodeData, 0x87dc, 0x3b0);
+OVR233_LAYOUT_ASSERT(introModelScripts, 0x8b8c, 0x40);
+OVR233_LAYOUT_ASSERT(introCutsceneOpcodeData, 0x8bcc, 0x11c);
+OVR233_LAYOUT_ASSERT(introCutsceneOpcodes, 0x8ce8, 0x24);
+OVR233_LAYOUT_ASSERT(introEndingOpcodeData, 0x8d0c, 0x50);
+OVR233_LAYOUT_ASSERT(creditsCutsceneOpcodeData, 0x8d5c, 0x1dc);
+OVR233_LAYOUT_ASSERT(creditsCutsceneOpcodes, 0x8f38, 0x50);
+OVR233_LAYOUT_ASSERT(creditsOpcodeData, 0x8f88, 0x40);
+OVR233_LAYOUT_ASSERT(boxAndAdvCharSelectOpcodeData, 0x8fc8, 0x10c4);
+OVR233_LAYOUT_ASSERT(boxModelScripts, 0xa08c, 0xac);
+OVR233_LAYOUT_ASSERT(advCharSelectSelectOpcodes, 0xa138, 0x20);
+OVR233_LAYOUT_ASSERT(advCharSelectDeselectOpcodes, 0xa158, 0x20);
+OVR233_LAYOUT_ASSERT(cs_initMatrixData, 0xa180, 0x17c0);
+OVR233_LAYOUT_ASSERT(cs_initMatrixTable, 0xb940, 0x20);
+OVR233_LAYOUT_ASSERT(cs_initMatrixBool, 0xb960, 0x1);
+OVR233_LAYOUT_ASSERT(introClearBoxColor, 0xba84, 0x4);
+OVR233_LAYOUT_ASSERT(introClearBoxRect, 0xba88, 0x8);
+OVR233_LAYOUT_ASSERT(creditsDancerRotOffset, 0xba90, 0x8);
+OVR233_LAYOUT_ASSERT(bossCS, 0xba98, 0x2d8);
+OVR233_LAYOUT_ASSERT(isCutsceneOver, 0xbd70, 0x4);
+OVR233_LAYOUT_ASSERT(PodiumInitUnk2, 0xbd74, 0x4);
+OVR233_LAYOUT_ASSERT(FXVolumeBackup, 0xbd78, 0x2);
+OVR233_LAYOUT_ASSERT(MusicVolumeBackup, 0xbd7a, 0x2);
+OVR233_LAYOUT_ASSERT(VoiceVolumeBackup, 0xbd7c, 0x2);
+OVR233_LAYOUT_ASSERT(PodiumInitUnk3, 0xbd80, 0x4);
+OVR233_LAYOUT_ASSERT(cutsceneState, 0xbd84, 0x4);
+OVR233_LAYOUT_ASSERT(ptrModelBossHead, 0xbd88, 0x4);
+OVR233_LAYOUT_ASSERT(ptrModelBossBody, 0xbd8c, 0x4);
+_Static_assert(sizeof(OVR_233) == 0xbd90);
+
+#undef OVR233_LAYOUT_ASSERT
 
 // starts at 800b8598,
 // last byte of Garage Functions
@@ -481,6 +543,34 @@ struct OVR233_Garage
 	// === End of Garage Data ===
 	// Credits RDATA starts next byte
 };
+
+// NOTE(aalhendi): Layout-verified pass 3 for garage data. Retail base is
+// NTSC-U 926 0x800b8598.
+#define OVR233_GARAGE_ASSERT(ELEMENT, OFFSET, SIZE)                      \
+	_Static_assert(OFFSETOF(struct OVR233_Garage, ELEMENT) == (OFFSET)); \
+	_Static_assert(sizeof(((struct OVR233_Garage *)0)->ELEMENT) == (SIZE))
+
+OVR233_GARAGE_ASSERT(menuGarage, 0x0, 0x2c);
+OVR233_GARAGE_ASSERT(numFramesMax_GarageMove, 0x2c, 0x4);
+OVR233_GARAGE_ASSERT(padding1, 0x30, 0x4);
+OVR233_GARAGE_ASSERT(numFramesMax_Zoom, 0x34, 0x4);
+OVR233_GARAGE_ASSERT(fovMin, 0x38, 0x4);
+OVR233_GARAGE_ASSERT(fovMax, 0x3c, 0x4);
+OVR233_GARAGE_ASSERT(unusedArr_garageChars, 0x40, 0x10);
+OVR233_GARAGE_ASSERT(barLen, 0x50, 0x6);
+OVR233_GARAGE_ASSERT(unusedFrameCount, 0x56, 0x2);
+OVR233_GARAGE_ASSERT(unusedArr_lngIndex, 0x58, 0x8);
+OVR233_GARAGE_ASSERT(barStat, 0x60, 0x18);
+OVR233_GARAGE_ASSERT(unusedArr_Colors, 0x78, 0xc);
+OVR233_GARAGE_ASSERT(barColors, 0x84, 0x1c);
+OVR233_GARAGE_ASSERT(numFramesCurr_GarageMove, 0xa0, 0x2);
+OVR233_GARAGE_ASSERT(numFramesCurr_ZoomIn, 0xa2, 0x2);
+OVR233_GARAGE_ASSERT(numFramesCurr_ZoomOut, 0xa4, 0x2);
+OVR233_GARAGE_ASSERT(delayOneSecond, 0xa6, 0x2);
+OVR233_GARAGE_ASSERT(boolSelected, 0xa8, 0x2);
+_Static_assert(sizeof(struct OVR233_Garage) == 0xac);
+
+#undef OVR233_GARAGE_ASSERT
 
 extern struct OVR233_Garage gGarage;
 
@@ -611,6 +701,48 @@ struct Ovr233_Credits_BSS
 	// 800b94bc - CreditsObj (0x340 large)
 	struct CreditsObj creditsObj;
 };
+
+// NOTE(aalhendi): Layout-verified pass 3 for credits BSS. Retail base is
+// NTSC-U 926 0x800b9488.
+#define OVR233_CREDITS_OBJ_ASSERT(ELEMENT, OFFSET, SIZE)              \
+	_Static_assert(OFFSETOF(struct CreditsObj, ELEMENT) == (OFFSET)); \
+	_Static_assert(sizeof(((struct CreditsObj *)0)->ELEMENT) == (SIZE))
+
+OVR233_CREDITS_OBJ_ASSERT(creditGhostModel, 0x0, 0x14);
+OVR233_CREDITS_OBJ_ASSERT(creditGhostInst, 0x14, 0x14);
+OVR233_CREDITS_OBJ_ASSERT(data_0x80_0x5, 0x28, 0x280);
+OVR233_CREDITS_OBJ_ASSERT(data_0x18_0x5, 0x2a8, 0x78);
+OVR233_CREDITS_OBJ_ASSERT(countdown, 0x320, 0x2);
+OVR233_CREDITS_OBJ_ASSERT(unk, 0x324, 0x4);
+OVR233_CREDITS_OBJ_ASSERT(creditDanceInst, 0x328, 0x4);
+OVR233_CREDITS_OBJ_ASSERT(credits_posY, 0x32c, 0x2);
+OVR233_CREDITS_OBJ_ASSERT(credits_topString, 0x330, 0x4);
+OVR233_CREDITS_OBJ_ASSERT(epilogue_topString, 0x334, 0x4);
+OVR233_CREDITS_OBJ_ASSERT(epilogue_nextString, 0x338, 0x4);
+OVR233_CREDITS_OBJ_ASSERT(epilogueCount200, 0x33c, 0x2);
+OVR233_CREDITS_OBJ_ASSERT(epiloguePosX, 0x33e, 0x2);
+_Static_assert(sizeof(struct CreditsObj) == 0x340);
+
+#undef OVR233_CREDITS_OBJ_ASSERT
+
+#define OVR233_CREDITS_BSS_ASSERT(ELEMENT, OFFSET, SIZE)                      \
+	_Static_assert(OFFSETOF(struct Ovr233_Credits_BSS, ELEMENT) == (OFFSET)); \
+	_Static_assert(sizeof(((struct Ovr233_Credits_BSS *)0)->ELEMENT) == (SIZE))
+
+OVR233_CREDITS_BSS_ASSERT(creditGhost_Pos, 0x0, 0x8);
+OVR233_CREDITS_BSS_ASSERT(unused_Pos, 0x8, 0x8);
+OVR233_CREDITS_BSS_ASSERT(creditText_PosX, 0x10, 0x4);
+OVR233_CREDITS_BSS_ASSERT(CreditThread, 0x14, 0x4);
+OVR233_CREDITS_BSS_ASSERT(DancerThread, 0x18, 0x4);
+OVR233_CREDITS_BSS_ASSERT(dancerInst_invisible, 0x1c, 0x4);
+OVR233_CREDITS_BSS_ASSERT(numStrings, 0x20, 0x2);
+OVR233_CREDITS_BSS_ASSERT(ptrStrings, 0x24, 0x4);
+OVR233_CREDITS_BSS_ASSERT(boolAllBlue, 0x28, 0x2);
+OVR233_CREDITS_BSS_ASSERT(unused, 0x2c, 0x8);
+OVR233_CREDITS_BSS_ASSERT(creditsObj, 0x34, 0x340);
+_Static_assert(sizeof(struct Ovr233_Credits_BSS) == 0x374);
+
+#undef OVR233_CREDITS_BSS_ASSERT
 
 #ifndef REBUILD_PC
 _Static_assert(OFFSETOF(struct Ovr233_Credits_BSS, numStrings) == 0x20);
