@@ -860,15 +860,6 @@ int Timer_GetTime_Elapsed(int time, void *param_2);
 // Torch
 
 void Torch_Main(void *particleList_heatWarp, struct PushBuffer *pb, struct PrimMem *primMem, char numPlyr, int swapchainIndex);
-void Torch_Subset1();
-// Torch_Subset2()
-// Torch_Subset3()
-void Torch_Subset4();
-// Torch_Subset5()
-// Torch_Subset6()
-void Torch_Subset7();
-// Torch_Subset8()
-// Torch_Subset9()
 
 // UI
 
@@ -979,8 +970,8 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 void VehFrameProc_Driving(struct Thread *t, struct Driver *d);
 void VehFrameProc_Spinning();
 void VehFrameProc_LastSpin();
-// VehGroundShadow_Subset1()
-void VehGroundShadow_Main();
+bool VehGroundShadow_Subset1(struct TextureLayout *pDst, int iconIndex);
+void VehGroundShadow_Main(void);
 // VehGroundSkids_Subset1()
 // VehGroundSkids_Subset2()
 void VehGroundSkids_Main(struct Thread *thread, struct PushBuffer *pb);

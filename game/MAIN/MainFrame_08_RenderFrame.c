@@ -86,7 +86,7 @@ void DECOMP_MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem 
 #if !defined(REBUILD_PS1) || defined(CTR_NATIVE)
 	RenderAllWeather(gGT);
 #endif
-#ifndef REBUILD_PS1
+#if !defined(REBUILD_PS1) || defined(CTR_NATIVE)
 	RenderAllConfetti(gGT);
 #endif
 #if !defined(REBUILD_PS1) || defined(CTR_NATIVE)
@@ -97,7 +97,7 @@ void DECOMP_MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem 
 
 	RenderAllHUD(gGT);
 
-#ifndef REBUILD_PS1
+#if !defined(REBUILD_PS1) || defined(CTR_NATIVE)
 	RenderAllBeakerRain(gGT);
 
 // DEAD CODE
@@ -134,8 +134,11 @@ void DECOMP_MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem 
 	RenderAllTires(gGT);
 #endif
 
-#ifndef REBUILD_PS1
+#if !defined(REBUILD_PS1) || defined(CTR_NATIVE)
 	RenderAllShadows(gGT);
+#endif
+
+#if !defined(REBUILD_PS1) || defined(CTR_NATIVE)
 	RenderAllHeatParticles(gGT);
 
 #elif !defined(CTR_NATIVE)
@@ -173,8 +176,12 @@ void DECOMP_MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem 
 				TEST_226(0, &gGT->pushBuffer[i], gGT->level1->ptr_mesh_info, &gGT->backBuffer->primMem, gGT->visMem1->visFaceList[i],
 				         0); // waterEnvMap?
 
+#ifdef CTR_NATIVE
+				DrawSky_Full(gGT->level1->ptr_skybox, &gGT->pushBuffer[i], &gGT->backBuffer->primMem);
+#else
 				// placeholder for DrawSky_Full
 				TEST_DrawSkybox(gGT->level1->ptr_skybox, &gGT->pushBuffer[i], &gGT->backBuffer->primMem);
+#endif
 			}
 
 #endif
@@ -459,7 +466,7 @@ void RenderAllWeather(struct GameTracker *gGT)
 }
 #endif
 
-#ifndef REBUILD_PS1
+#if !defined(REBUILD_PS1) || defined(CTR_NATIVE)
 void RenderAllConfetti(struct GameTracker *gGT)
 {
 	int i;
@@ -653,7 +660,7 @@ void RenderAllHUD(struct GameTracker *gGT)
 	}
 }
 
-#ifndef REBUILD_PS1
+#if !defined(REBUILD_PS1) || defined(CTR_NATIVE)
 void RenderAllBeakerRain(struct GameTracker *gGT)
 {
 	int numPlyrCurrGame = gGT->numPlyrCurrGame;
@@ -842,14 +849,16 @@ void RenderAllTires(struct GameTracker *gGT)
 }
 #endif
 
-#ifndef REBUILD_PS1
+#if !defined(REBUILD_PS1) || defined(CTR_NATIVE)
 void RenderAllShadows(struct GameTracker *gGT)
 {
 	if ((gGT->renderFlags & 0x200) == 0)
 		return;
 	VehGroundShadow_Main();
 }
+#endif
 
+#if !defined(REBUILD_PS1) || defined(CTR_NATIVE)
 void RenderAllHeatParticles(struct GameTracker *gGT)
 {
 	if ((gGT->renderFlags & 0x800) == 0)
@@ -857,7 +866,9 @@ void RenderAllHeatParticles(struct GameTracker *gGT)
 
 	Torch_Main(gGT->particleList_heatWarp, &gGT->pushBuffer[0], &gGT->backBuffer->primMem, gGT->numPlyrCurrGame, gGT->swapchainIndex * 0x128);
 }
+#endif
 
+#ifndef REBUILD_PS1
 void RenderAllLevelGeometry(struct GameTracker *gGT)
 {
 	int i;

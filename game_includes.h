@@ -11,6 +11,8 @@
 #include "game/TEST_ConvertRotToMatrix.c"
 #include "game/TEST_ThTickRunBucket.c"
 #include "game/TEST_ThTickSetAndExec.c"
+#include "game/DrawConfetti/DrawConfetti.c"
+#include "game/DrawSky/DrawSky.c"
 
 #define ConvertRotToMatrix TEST_ConvertRotToMatrix
 #define ThTick_SetAndExec  TEST_ThTickSetAndExec
@@ -22,6 +24,8 @@
 #include "game/RenderTires/DrawTires_Solid.c"
 #include "game/RenderTires/DrawTires_Reflection.c"
 #include "game/RenderStars/RenderStars.c"
+#include "game/Torch/Torch.c"
+#include "game/RenderWeather/RedBeaker_RenderRain.c"
 #include "game/RenderWeather/RenderWeather.c"
 
 #include "game/MAIN/MAIN_AAA_BigBlock1.c"
@@ -529,6 +533,9 @@
 
 #include "game/Vehicle/VehPhysForce_0_ConvertSpeedToVec.c"
 #include "game/Vehicle/VehPhysForce_2_OnApplyForces.c"
+#include "game/Vehicle/VehPhysForce_5_RotAxisAngle.c"
+#include "game/Vehicle/VehGroundShadow_0_Subset1.c"
+#include "game/Vehicle/VehGroundShadow_1_Main.c"
 
 #include "game/Vehicle/VehPhysGeneral_0_PhysAngular.c"
 #include "game/Vehicle/VehPhysGeneral_1_LerpQuarterStrength.c"
