@@ -6,9 +6,8 @@ static int DECOMP_COLL_SearchBSP_CallbackPARAM_Overlaps(struct BSP *node, short 
 	        (minZ <= node->box.max[2]) && (minY <= node->box.max[1]));
 }
 
-static void DECOMP_COLL_SearchBSP_CallbackPARAM_VisitChild(struct BSP *root, unsigned short childId, short minX, short minY, short minZ, short maxX, short maxY,
-                                                           short maxZ, void (*callback)(struct BSP *, struct ScratchpadStruct *),
-                                                           struct ScratchpadStruct *param)
+static void DECOMP_COLL_SearchBSP_CallbackPARAM_PushChild(struct BSP *root, unsigned short childId, short minX, short minY, short minZ, short maxX, short maxY,
+                                                          short maxZ, u_short **stackTop)
 {
 	struct BSP *child;
 
@@ -19,24 +18,25 @@ static void DECOMP_COLL_SearchBSP_CallbackPARAM_VisitChild(struct BSP *root, uns
 	if (!DECOMP_COLL_SearchBSP_CallbackPARAM_Overlaps(child, minX, minY, minZ, maxX, maxY, maxZ))
 		return;
 
-	if ((childId & 0x4000) != 0)
-	{
-		callback(child, param);
-		return;
-	}
+	**stackTop = childId;
+	(*stackTop)++;
+}
 
-	DECOMP_COLL_SearchBSP_CallbackPARAM_VisitChild(root, (unsigned short)child->data.branch.childID[1], minX, minY, minZ, maxX, maxY, maxZ, callback, param);
-
-	DECOMP_COLL_SearchBSP_CallbackPARAM_VisitChild(root, (unsigned short)child->data.branch.childID[0], minX, minY, minZ, maxX, maxY, maxZ, callback, param);
+static void DECOMP_COLL_SearchBSP_CallbackPARAM_PushChildren(struct BSP *root, struct BSP *node, short minX, short minY, short minZ, short maxX, short maxY,
+                                                             short maxZ, u_short **stackTop)
+{
+	// Retail pushes child 0 then child 1; the scratchpad stack pops child 1 first.
+	DECOMP_COLL_SearchBSP_CallbackPARAM_PushChild(root, (u_short)node->data.branch.childID[0], minX, minY, minZ, maxX, maxY, maxZ, stackTop);
+	DECOMP_COLL_SearchBSP_CallbackPARAM_PushChild(root, (u_short)node->data.branch.childID[1], minX, minY, minZ, maxX, maxY, maxZ, stackTop);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8001ebec-0x8001ede4
-// NOTE(aalhendi): PSX-backfeed blocker: native scratchpad divergence. Retail
-// uses 0x1f800030-0x1f80006f as a register-save/traversal stack; ctr-native
-// uses host recursion and must restore the scratchpad contract before PSX use.
 void DECOMP_COLL_SearchBSP_CallbackPARAM(struct BSP *root, struct BoundingBox *bbox, void (*callback)(struct BSP *, struct ScratchpadStruct *),
                                          struct ScratchpadStruct *param)
 {
+	u_short *stackBase;
+	u_short *stackTop;
+
 	if (root == NULL)
 		return;
 
@@ -47,7 +47,28 @@ void DECOMP_COLL_SearchBSP_CallbackPARAM(struct BSP *root, struct BoundingBox *b
 	short maxY = bbox->max[1];
 	short maxZ = bbox->max[2];
 
-	DECOMP_COLL_SearchBSP_CallbackPARAM_VisitChild(root, (unsigned short)root->data.branch.childID[1], minX, minY, minZ, maxX, maxY, maxZ, callback, param);
+	// Retail stores pending child IDs at scratchpad 0x1f800070 and pops them
+	// LIFO, preserving the original BSP traversal order without host recursion.
+	stackBase = CTR_SCRATCHPAD_PTR(u_short, 0x70);
+	stackTop = stackBase;
 
-	DECOMP_COLL_SearchBSP_CallbackPARAM_VisitChild(root, (unsigned short)root->data.branch.childID[0], minX, minY, minZ, maxX, maxY, maxZ, callback, param);
+	DECOMP_COLL_SearchBSP_CallbackPARAM_PushChildren(root, root, minX, minY, minZ, maxX, maxY, maxZ, &stackTop);
+
+	while (stackTop != stackBase)
+	{
+		u_short childId;
+		struct BSP *child;
+
+		stackTop--;
+		childId = *stackTop;
+		child = &root[childId & 0x3fff];
+
+		if ((childId & 0x4000) != 0)
+		{
+			callback(child, param);
+			continue;
+		}
+
+		DECOMP_COLL_SearchBSP_CallbackPARAM_PushChildren(root, child, minX, minY, minZ, maxX, maxY, maxZ, &stackTop);
+	}
 }
