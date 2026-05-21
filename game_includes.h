@@ -113,6 +113,7 @@
 #include "game/COLL/COLL_18_MOVED_QUADBLK_TestTriangles.c"
 #include "game/COLL/COLL_19_MOVED_BSPLEAF_TestQuadblocks.c"
 #include "game/COLL/COLL_20_MOVED_FindScrub.c"
+#include "game/COLL/COLL_22_MOVED_ScrubImpact.c"
 
 #include "game/CTR/CTR_00_Box_DrawWirePrims.c"
 #include "game/CTR/CTR_01_Box_DrawWireBox.c"
@@ -286,6 +287,7 @@
 #include "game/HOWL/h92_Voiceline_PoolClear.c"
 #include "game/HOWL/h93_Voiceline_StopAll.c"
 #include "game/HOWL/h94_Voiceline_ToggleEnable.c"
+#include "game/HOWL/h95_Voiceline_RequestPlay.c"
 #include "game/HOWL/h99_Voiceline_SetDefaults.c"
 #include "game/HOWL/h100_Audio_SetState.c"
 #include "game/HOWL/h101_Audio_SetState_Safe.c"

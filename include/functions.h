@@ -97,7 +97,7 @@ void COLL_MOVED_QUADBLK_TestTriangles(struct QuadBlock *qb, struct ScratchpadStr
 void COLL_MOVED_BSPLEAF_TestQuadblocks(struct BSP *node, struct ScratchpadStruct *sps);
 void COLL_MOVED_FindScrub(struct QuadBlock *qb, int triangleID, struct ScratchpadStruct *sps);
 void COLL_MOVED_PlayerSearch(struct Thread *t, struct Driver *d);
-u32 COLL_MOVED_ScrubImpact(struct Driver *d, struct Thread *t, int param_3, int param_4, int *param_5);
+u32 COLL_MOVED_ScrubImpact(struct Driver *d, struct Thread *t, struct ScratchpadStruct *sps, struct Scrub *scrub, int *velocity);
 
 // CTR
 
@@ -370,7 +370,7 @@ void Voiceline_ClearTimeStamp();
 // Voiceline_PoolClear()
 // Voiceline_StopAll()
 // Voiceline_ToggleEnable()
-void Voiceline_RequestPlay(int, s16, int);
+void Voiceline_RequestPlay(u32 voiceID, u32 characterID, u32 characterID2);
 // Voiceline_StartPlay()
 // Voiceline_Update()
 // Voiceline_EmptyFunc()
