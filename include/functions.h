@@ -934,7 +934,7 @@ void Vector_BakeMatrixTable();
 
 // from this point onwards it's all vehicle stuff
 
-// VehAfterColl_GetSurface()
+struct Scrub *VehAfterColl_GetSurface(u32 scrubId);
 // VehAfterColl_GetTerrain()
 
 // VehInit

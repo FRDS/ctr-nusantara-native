@@ -546,6 +546,7 @@
 #include "game/Vehicle/VehCalc_2_SteerAccel.c"
 #include "game/Vehicle/VehCalc_3_FastSqrt.c"
 
+#include "game/Vehicle/VehAfterColl_0_GetSurface.c"
 #include "game/Vehicle/VehAfterColl_1_GetTerrain.c"
 
 #include "game/Vehicle/VehFire_0_Audio.c"
