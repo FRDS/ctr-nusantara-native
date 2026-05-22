@@ -1,243 +1,204 @@
 #include <common.h>
 
+struct VehBirthPosRot
+{
+	s16 pos[3];
+	s16 rot[3];
+};
+
+static int VehBirth_IsDoor5InstDef(struct InstDef *instDef)
+{
+	if (instDef->modelID != STATIC_DOOR)
+		return 0;
+
+	if ((instDef->name[0] != 'd') || (instDef->name[1] != 'o') || (instDef->name[2] != 'o') || (instDef->name[3] != 'r') || (instDef->name[4] != '#') ||
+	    (instDef->name[5] != '5'))
+		return 0;
+
+	for (int i = 6; i < 0x10; i++)
+	{
+		if (instDef->name[i] != '\0')
+			return 0;
+	}
+
+	return 1;
+}
+
+static struct InstDef *VehBirth_FindDoor5(struct Level *level)
+{
+	struct InstDef *instDef = level->ptrInstDefs;
+
+	for (int i = 0; i < (int)level->numInstances; i++, instDef++)
+	{
+		if (VehBirth_IsDoor5InstDef(instDef))
+			return instDef;
+	}
+
+	return NULL;
+}
+
+static int VehBirth_ShouldSpawnOutsideBoss(struct GameTracker *gGT)
+{
+	if (gGT->podiumRewardID != STATIC_TROPHY)
+		return 0;
+
+	for (int i = 0, base = (gGT->levelID - N_SANITY_BEACH) * 4; i < 4; i++)
+	{
+		int trackID = data.advHubTrackIDs[base + i];
+
+		if (CHECK_ADV_BIT(sdata->advProgress.rewards, trackID + 6) == 0)
+			return 0;
+	}
+
+	if (CHECK_ADV_BIT(sdata->advProgress.rewards, gGT->levelID + 0x44) != 0)
+		return 0;
+
+	return 1;
+}
+
+static int VehBirth_ShouldUseStartlineInAdv(struct GameTracker *gGT, s16 *warppadRot)
+{
+	int prevLEV = gGT->prevLEV;
+
+	return (prevLEV == MAIN_MENU_LEVEL) || (prevLEV == ADVENTURE_GARAGE) || (prevLEV == -1) || (prevLEV == SCRAPBOOK) ||
+	       ((u32)(prevLEV - CREDITS_CRASH) < 0x14) || (warppadRot == NULL);
+}
+
+static struct VehBirthPosRot *VehBirth_SpawnType2PosRot(struct Level *level)
+{
+	return (struct VehBirthPosRot *)level->ptrSpawnType2_PosRot[1].posCoords;
+}
+
+static void VehBirth_SetBottomFromPos(s16 *posBottom, const s16 *pos)
+{
+	posBottom[0] = pos[0];
+	posBottom[1] = pos[1] + 0x80;
+	posBottom[2] = pos[2];
+}
+
+static u8 VehBirth_GetStartlineIndex(struct Driver *d)
+{
+	return sdata->kartSpawnOrderArray[d->driverID];
+}
+
+static void VehBirth_SetStartlinePosition(struct Driver *d, struct Level *level, s16 *posBottom)
+{
+	u8 spawnIndex = VehBirth_GetStartlineIndex(d);
+
+	d->actionsFlagSet |= 0x1000000;
+	d->distanceToFinish_checkpoint = level->ptr_restart_points[0].distToFinish << 3;
+	VehBirth_SetBottomFromPos(posBottom, level->DriverSpawn[spawnIndex].pos);
+}
+
+static void VehBirth_SetStartlineRotation(struct Driver *d, struct Level *level)
+{
+	u8 spawnIndex = VehBirth_GetStartlineIndex(d);
+
+	d->rotCurr.x = level->DriverSpawn[spawnIndex].rot[0];
+	d->rotCurr.y = (level->DriverSpawn[spawnIndex].rot[1] + 0x400) & 0xfff;
+	d->rotCurr.z = level->DriverSpawn[spawnIndex].rot[2];
+}
+
+static int VehBirth_ScaleTrig(int trig, int scale)
+{
+	return (trig * scale) >> 0xc;
+}
+
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80057c8c-0x80058898
 void DECOMP_VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 {
 	s16 posTop[3];
 	s16 posBottom[3];
 	s16 warppadPos[3];
 
-	struct PosRot
-	{
-		s16 pos[3];
-		s16 rot[3];
-	};
-
 	struct GameTracker *gGT = sdata->gGT;
 	struct Level *level1 = gGT->level1;
-	struct Instance *dInst = d->instSelf;
-
-#if !defined(REBUILD_PS1) || defined(CTR_NATIVE)
+	struct Instance *dInst;
 	struct ScratchpadStruct *sps = CTR_SCRATCHPAD_PTR(struct ScratchpadStruct, 0x108);
-#else
-	char scratchpad[0x1000];
-	struct ScratchpadStruct *sps = (struct ScratchpadStruct *)&scratchpad[0];
-#endif
 
-	int spawnAtBoss = gGT->gameMode2 & SPAWN_AT_BOSS;
+	struct InstDef *doorInst = NULL;
+	struct VehBirthPosRot *advSpawn = NULL;
+	s16 *warppadRot = NULL;
+	int spawnAtBoss;
+	int spawnOutsideBoss = 0;
 
-	// cheat flags
-	gGT->gameMode2 &= ~(SPAWN_AT_BOSS | 2);
+	if ((level1 == NULL) || (level1->ptr_mesh_info == NULL))
+		return;
 
-#if 0
-    // Check LEV data for nullptr
-    if (level1 == NULL || level1->ptr_mesh_info == NULL)
-    {
-        return;
-    }
-#endif
+	dInst = d->instSelf;
 
-	gGT->gameMode2 &= ~(VEH_FREEZE_DOOR);
+	sps->Union.QuadBlockColl.qbFlagsWanted = 0x3000;
+	sps->Union.QuadBlockColl.qbFlagsIgnored = 0;
+	sps->Union.QuadBlockColl.searchFlags = 0;
+	if (gGT->numPlyrCurrGame < 3)
+		sps->Union.QuadBlockColl.searchFlags = 2;
+	sps->ptr_mesh_info = level1->ptr_mesh_info;
 
-	struct PosRot *posRot;
-	s16 *rotArr;
-	s16 rotDeltaY;
+	gGT->gameMode2 &= ~VEH_FREEZE_DOOR;
+	spawnAtBoss = gGT->gameMode2 & SPAWN_AT_BOSS;
 
-	// if you are mask grabbed
 	if ((spawnFlag & 1) == 0)
 	{
-		posBottom[0] = (d->posCurr.x >> 8);
-		posBottom[1] = (d->posCurr.y >> 8);
-		posBottom[2] = (d->posCurr.z >> 8);
-
-		posRot = posBottom;
-		rotArr = &d->rotCurr.x;
-		rotDeltaY = 0;
+		posBottom[0] = d->posCurr.x >> 8;
+		posBottom[1] = (d->posCurr.y >> 8) + 0x80;
+		posBottom[2] = d->posCurr.z >> 8;
 	}
-
-	// always spawn using the
-	// 8-place starting line
-
-	// If just obtained Roo boss key
-	// spawn in front of hub door, beach-to-gemstone
-	else if ((gGT->podiumRewardID == STATIC_KEY) && (gGT->currAdvProfile.numKeys == 1))
-	{
-		gGT->gameMode2 |= VEH_FREEZE_DOOR;
-
-		// Stripped out OG code to do trigonometry
-		// on the door, just rig the results
-		posBottom[0] = 0xC676;
-		posBottom[1] = 0x17a - 0x80;
-		posBottom[2] = 0xFC79;
-
-		// Rigged to Door#5
-		posRot = posBottom;
-		rotArr = &level1->ptrInstDefs[10].rot[0];
-		rotDeltaY = 0x800;
-	}
-
-	// if you want to spawn outside boss door
-	else if (
-	    // After leaving a boss race
-	    (spawnAtBoss) ||
-
-	    // Before starting a boss cutscene
-	    (
-	        // Just won the last trophy on the hub
-	        (gGT->podiumRewardID == STATIC_TROPHY) && ((gGT->currAdvProfile.numTrophies & 3) == 0)))
-	{
-		// position outside boss door
-		posRot = &level1->ptrSpawnType2_PosRot[1].posCoords[6];
-
-		// spawn facing TOWARDS boss door,
-		// after winning last trophy on hub
-		rotArr = &posRot->rot[0];
-		rotDeltaY = 0x400;
-
-		// After leaving a boss race
-		if (spawnAtBoss)
-		{
-			// spawn facing AWAY from door
-			rotDeltaY = 0xC00;
-
-			// if leaving pinstripe boss
-			if (gGT->prevLEV == HOT_AIR_SKYWAY)
-			{
-				// if exited to pinstripe,
-				// face to the RIGHT from the door
-				if (gGT->levelID == CITADEL_CITY)
-					rotDeltaY = 0x800;
-
-				// if exited to oxide,
-				// face TOWARDS the door
-				if (gGT->levelID == GEM_STONE_VALLEY)
-					rotDeltaY = 0x400;
-			}
-		}
-	}
-
-	// adventure hub + podium reward
-	else if (
-	    // must check adventure arena, cause winning
-	    // a sapphire relic and hitting RETRY will
-	    // set podiumRewardID=RELIC, then spawn in the void
-	    ((gGT->gameMode1 & ADVENTURE_ARENA) != 0) && (gGT->podiumRewardID != NOFUNC) // 0
-	)
-	{
-		// spawn on the podium in the adv hub
-		posRot = &level1->ptrSpawnType2_PosRot[1].posCoords[0];
-		rotArr = &posRot->rot[0];
-		rotDeltaY = 0;
-	}
-
-	// adventure hub + exit portal
-	else if (
-
-	    ((gGT->gameMode1 & ADVENTURE_ARENA) != 0) && ((gGT->prevLEV >= 100) ||       // Gem Cups
-	                                                  (gGT->prevLEV <= LAB_BASEMENT) // Other Portals
-
-	                                                  ))
-	{
-		// get position where driver should spawn on map,
-		// outside warppad they previously entered
-		s16 *warppadRot = DECOMP_AH_WarpPad_GetSpawnPosRot(&warppadPos);
-
-		posRot = warppadPos;
-		rotArr = warppadRot;
-		rotDeltaY = 0x400;
-	}
-
-	// normal track,
-	// or advHub return from:
-	//		main menu
-	//		adv garage
-	//		scrapbook
-	//		credits
 	else
 	{
-// DEBUG TEST
-#if 0
-		gGT->numLaps = 1;
-		if(d->driverID != 0)
-#endif
+		if ((gGT->podiumRewardID == STATIC_KEY) && (gGT->currAdvProfile.numKeys == 1))
+			doorInst = VehBirth_FindDoor5(level1);
+		else
+			spawnOutsideBoss = VehBirth_ShouldSpawnOutsideBoss(gGT);
 
-		// racer crossed the start line backwards,
-		// so lap doesn't count when race starts
-		d->actionsFlagSet |= 0x1000000;
+		if (spawnAtBoss != 0)
+			spawnOutsideBoss = 1;
 
-#if !defined(REBUILD_PS1) || defined(CTR_NATIVE)
-		if (level1->ptr_restart_points != NULL)
-			d->distanceToFinish_checkpoint = level1->ptr_restart_points[0].distToFinish << 3;
-#endif
+		if (doorInst != NULL)
+		{
+			int rotY = doorInst->rot[1];
 
-		// get coords where driver based on driver order (0-7)
-		posRot = &level1->DriverSpawn[sdata->kartSpawnOrderArray[d->driverID]];
-		rotArr = &posRot->rot[0];
-		rotDeltaY = 0x400;
+			gGT->gameMode2 |= VEH_FREEZE_DOOR;
+			posBottom[0] = doorInst->pos[0] + VehBirth_ScaleTrig(DECOMP_MATH_Cos(rotY), 800) + VehBirth_ScaleTrig(DECOMP_MATH_Cos(rotY + 0x400), 0x200);
+			posBottom[1] = doorInst->pos[1] + 0x17a;
+			posBottom[2] = doorInst->pos[2] + VehBirth_ScaleTrig(DECOMP_MATH_Sin(rotY), 800) + VehBirth_ScaleTrig(DECOMP_MATH_Sin(rotY + 0x400), 0x200);
+		}
+		else if (spawnOutsideBoss != 0)
+		{
+			advSpawn = VehBirth_SpawnType2PosRot(level1);
+			VehBirth_SetBottomFromPos(posBottom, advSpawn[1].pos);
+		}
+		else if ((gGT->gameMode1 & ADVENTURE_ARENA) == 0)
+		{
+			VehBirth_SetStartlinePosition(d, level1, posBottom);
+		}
+		else if (gGT->podiumRewardID == NOFUNC)
+		{
+			if ((gGT->prevLEV == MAIN_MENU_LEVEL) || (gGT->prevLEV == ADVENTURE_GARAGE) || (gGT->prevLEV == -1) || (gGT->prevLEV == SCRAPBOOK) ||
+			    ((u32)(gGT->prevLEV - CREDITS_CRASH) < 0x14))
+			{
+				VehBirth_SetStartlinePosition(d, level1, posBottom);
+			}
+			else
+			{
+				warppadRot = DECOMP_AH_WarpPad_GetSpawnPosRot(warppadPos);
+				VehBirth_SetBottomFromPos(posBottom, warppadPos);
+			}
+		}
+		else
+		{
+			advSpawn = VehBirth_SpawnType2PosRot(level1);
+			VehBirth_SetBottomFromPos(posBottom, advSpawn[0].pos);
+		}
 	}
-
-	posBottom[0] = posRot->pos[0];
-	posBottom[1] = posRot->pos[1] + 0x80;
-	posBottom[2] = posRot->pos[2];
 
 	posTop[0] = posBottom[0];
 	posTop[1] = posBottom[1] - 0x100;
 	posTop[2] = posBottom[2];
 
-	d->rotCurr.x = rotArr[0];
-	d->rotCurr.y = (rotArr[1] + rotDeltaY) & 0xfff;
-	d->rotCurr.z = rotArr[2];
-
-#if defined(REBUILD_PS1) && !defined(CTR_NATIVE)
-
-	for (int i = 0; i < 7; i++)
-		sdata->kartSpawnOrderArray[i] = i;
-
-	// position index on starting line
-	posRot = &level1->DriverSpawn[sdata->kartSpawnOrderArray[d->driverID]];
-
-	// rotation data of all 8 drivers on starting line
-	d->rotCurr.x = posRot->rot[0];
-	d->rotCurr.y = posRot->rot[1] + 0x400;
-	d->rotCurr.z = posRot->rot[2];
-
-	d->posCurr.x = posRot->pos[0] << 8;
-	d->posCurr.y = (posRot->pos[1] - 0x40) << 8;
-	d->posCurr.z = posRot->pos[2] << 8;
-
-	dInst->matrix.t[0] = posRot->pos[0];
-	dInst->matrix.t[1] = (posRot->pos[1] - 0x40);
-	dInst->matrix.t[2] = posRot->pos[2];
-
-	ConvertRotToMatrix(&dInst->matrix.m, &d->rotCurr.x);
-
-#else
-#ifdef CTR_NATIVE
-	if ((level1->ptr_restart_points == NULL) || (level1->ptr_mesh_info == NULL) || (level1->ptr_mesh_info->ptrQuadBlockArray == NULL) ||
-	    (level1->ptr_mesh_info->ptrVertexArray == NULL))
-	{
-		// NOTE(aalhendi): Native menu/cutscene levels can birth drivers without
-		// track collision data. Keep the rebuild spawn path for those scenes.
-		d->posCurr.x = posRot->pos[0] << 8;
-		d->posCurr.y = (posRot->pos[1] - 0x40) << 8;
-		d->posCurr.z = posRot->pos[2] << 8;
-
-		dInst->matrix.t[0] = posRot->pos[0];
-		dInst->matrix.t[1] = posRot->pos[1] - 0x40;
-		dInst->matrix.t[2] = posRot->pos[2];
-
-		ConvertRotToMatrix(&dInst->matrix.m, &d->rotCurr.x);
-	}
-	else
-#endif
 	{
 		// search for ground and wall flags,
 		// exclude no flags (take 'any' ground/wall)
 		// collision triangles, 2 (low-LOD), 8 (hi-LOD)
-		sps->Union.QuadBlockColl.qbFlagsWanted = 0x3000;
-		sps->Union.QuadBlockColl.qbFlagsIgnored = 0;
-		sps->Union.QuadBlockColl.searchFlags = (gGT->numPlyrCurrGame > 3) ? 2 : 0;
-		sps->ptr_mesh_info = level1->ptr_mesh_info;
-
 		COLL_SearchBSP_CallbackQUADBLK(&posTop[0], &posBottom[0], sps, 0);
 
 		// if collision was not found
@@ -287,7 +248,59 @@ void DECOMP_VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 		d->quadBlockHeight = (int)sps->Union.QuadBlockColl.hitPos[1] << 8;
 	}
 
-#endif
+	if ((spawnFlag & 1) != 0)
+	{
+		if (doorInst != NULL)
+		{
+			d->rotCurr.y = (doorInst->rot[1] + 0x800) & 0xfff;
+			gGT->gameMode2 &= ~(SPAWN_AT_BOSS | 2);
+		}
+		else if (spawnOutsideBoss != 0)
+		{
+			if (advSpawn == NULL)
+				advSpawn = VehBirth_SpawnType2PosRot(level1);
+
+			u16 rotY = (advSpawn[1].rot[1] + 0x400) & 0xfff;
+
+			d->rotCurr.y = rotY;
+			if (spawnAtBoss != 0)
+			{
+				if (gGT->levelID == CITADEL_CITY)
+				{
+					rotY += 0x400;
+				}
+				else if (!((gGT->levelID == GEM_STONE_VALLEY) && (gGT->prevLEV == HOT_AIR_SKYWAY)))
+				{
+					rotY += 0x800;
+				}
+
+				d->rotCurr.y = rotY & 0xfff;
+			}
+
+			gGT->gameMode2 &= ~(SPAWN_AT_BOSS | 2);
+		}
+		else if ((gGT->gameMode1 & ADVENTURE_ARENA) == 0)
+		{
+			VehBirth_SetStartlineRotation(d, level1);
+		}
+		else if (gGT->podiumRewardID != NOFUNC)
+		{
+			if (advSpawn == NULL)
+				advSpawn = VehBirth_SpawnType2PosRot(level1);
+
+			d->rotCurr.y = advSpawn[0].rot[1] & 0xfff;
+		}
+		else if (VehBirth_ShouldUseStartlineInAdv(gGT, warppadRot))
+		{
+			VehBirth_SetStartlineRotation(d, level1);
+		}
+		else
+		{
+			d->rotCurr.x = warppadRot[0];
+			d->rotCurr.y = (warppadRot[1] + 0x400) & 0xfff;
+			d->rotCurr.z = warppadRot[2];
+		}
+	}
 
 	d->speed = 0;
 	d->speedApprox = 0;
@@ -316,23 +329,13 @@ void DECOMP_VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 	d->rotPrev.y = d->rotCurr.y;
 	d->rotPrev.z = d->rotCurr.z;
 
+	if ((doorInst != NULL) && ((spawnFlag & 1) != 0))
+		d->speed = 0xa00;
+
 	// set animation to zero
 	dInst->animIndex = 0;
 
-	// halfway
-	dInst->animFrame = 10;
-
-#if 0 // 10 =
-		VehFrameInst_GetStartFrame(
-
-			0, // midpoint
-
-			VehFrameInst_GetNumAnimFrames(
-				dInst, 	// driver instance
-				0				// anim #0, steer
-			)
-		);
-#endif
+	dInst->animFrame = DECOMP_VehFrameInst_GetStartFrame(0, DECOMP_VehFrameInst_GetNumAnimFrames(dInst, 0));
 
 	// Set Scale (x, y, z)
 	dInst->scale[0] = 0xCCC;
@@ -347,6 +350,9 @@ void DECOMP_VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 
 	if (dInst->thread->modelIndex == DYNAMIC_PLAYER)
 	{
+		for (int i = 0; i < 0xd; i++)
+			d->funcPtrs[i] = NULL;
+
 		DECOMP_CAM_StartOfRace(&gGT->cameraDC[d->driverID]);
 
 		dInst->thread->funcThTick = ((gGT->gameMode1 & (GAME_CUTSCENE | MAIN_MENU)) == 0) ? NULL : DECOMP_VehBirth_NullThread;
@@ -360,28 +366,26 @@ void DECOMP_VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 	d->lapTime = 0;
 	d->distanceToFinish_curr = 0;
 
-	d->BattleHUD.numLives = gGT->battleSetup.lifeLimit;
-
 	// turn off 21th and 26th flags of Actions Flag set
 	//(means racer is not an AI and racer hasn't finished the race)
 	d->actionsFlagSet &= ~(0x2100000);
 
+	if ((gGT->gameMode2 & CHEAT_WUMPA) != 0)
+		d->numWumpas = 99;
+
 	d->numHeldItems = 0;
 	d->PickupLetterHUD.numCollected = 0;
+	d->BattleHUD.numLives = gGT->battleSetup.lifeLimit;
 
 	// no item
 	char weaponId = 0xf;
 	u32 gameMode2 = gGT->gameMode2;
 	if ((gameMode2 & CHEAT_MASK) != 0)
 		weaponId = 7;
-	if ((gameMode2 & CHEAT_TURBO) != 0)
+	else if ((gameMode2 & CHEAT_TURBO) != 0)
 		weaponId = 0;
-	if ((gameMode2 & CHEAT_BOMBS) != 0)
+	else if ((gameMode2 & CHEAT_BOMBS) != 0)
 		weaponId = 1;
-	if ((gameMode2 & CHEAT_WUMPA) != 0)
-		d->numWumpas = 99;
-	if ((gameMode2 & CHEAT_ENGINE) != 0)
-		d->superEngineTimer = 0x2d00;
 	d->heldItemID = weaponId;
 
 	if (weaponId != 0xf)
@@ -394,10 +398,13 @@ void DECOMP_VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 	    // only make players invisible, not AIs
 	    (d->driverID < gGT->numPlyrCurrGame))
 	{
-		dInst->flags &= ~(DRAW_TRANSPARENT); // originally (DRAW_TRANSPARENT (0x10000) | GHOST_DRAW_TRANSPARENT (0x6000))
+		dInst->flags &= ~(DRAW_TRANSPARENT | GHOST_DRAW_TRANSPARENT);
 
 		dInst->flags |= GHOST_DRAW_TRANSPARENT;
 
 		d->invisibleTimer = 0x2d00;
 	}
+
+	if ((gameMode2 & CHEAT_ENGINE) != 0)
+		d->superEngineTimer = 0x2d00;
 }

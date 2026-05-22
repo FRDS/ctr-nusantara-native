@@ -654,7 +654,9 @@
 #include "game/Vehicle/VehPhysJoystick_1_GetStrength.c"
 #include "game/Vehicle/VehPhysJoystick_2_GetStrengthAbsolute.c"
 
+#define VehPhysGeneral_GetBaseSpeed DECOMP_VehPhysGeneral_GetBaseSpeed
 #include "game/Vehicle/VehPhysProc_00_Driving_PhysLinear.c"
+#undef VehPhysGeneral_GetBaseSpeed
 #include "game/Vehicle/VehPhysProc_01_Driving_Audio.c"
 #include "game/Vehicle/VehPhysProc_02_Driving_Update.c"
 #include "game/Vehicle/VehPhysProc_03_Driving_Init.c"

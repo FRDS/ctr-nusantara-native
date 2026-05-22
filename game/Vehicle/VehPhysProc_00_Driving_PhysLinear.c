@@ -3,9 +3,26 @@
 // budget: 4624
 // curr: 4380
 
-// see the bottom of this file
-extern s16 PhysLinear_DriverOffsets[14];
+static void VehPhysProc_Driving_DecrementTimer(s16 *timer, int elapsed)
+{
+	if (*timer > 0)
+	{
+		*timer -= elapsed;
+		if (*timer < 0)
+			*timer = 0;
+	}
+}
 
+static void VehPhysProc_Driving_DecrementTimerCounter(s16 *timer, int elapsed, int *counter)
+{
+	if (*timer > 0)
+	{
+		VehPhysProc_Driving_DecrementTimer(timer, elapsed);
+		*counter += elapsed;
+	}
+}
+
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8006181c-0x80062a2c
 void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver)
 {
 	struct GameTracker *gGT;
@@ -25,7 +42,7 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 	u32 buttonsTapped;
 	u16 driverTimerNegativePrelim;
 	s16 driverTimer;
-	s16 timerHazard;
+	int timerHazard;
 	s16 approximateSpeed2;
 	u32 actionsFlagSetCopy;
 	s16 driverSpeedSmth2;
@@ -35,8 +52,6 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 
 	s16 *normSrc;
 	s16 *normDst;
-	s16 *val;
-	int i;
 	int msPerFrame;
 	s16 driverRankItemValue;
 	u32 itemSound;
@@ -79,33 +94,26 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 		driver->distanceDriven += (driver->speedApprox * msPerFrame) >> 8;
 	}
 
-	for (i = 0; i < 14; i++)
-	{
-		s16 *val = (s16 *)((int)driver + (int)PhysLinear_DriverOffsets[i]);
-		if (*val > 0)
-		{
-			*val -= msPerFrame;
-			if (*val < 0)
-				*val = 0;
-		}
-	}
-
-	if (driver->reserves > 0)
-		driver->timeSpentUsingReserves += msPerFrame;
-	if (driver->set_0xF0_OnWallRub > 0)
-		driver->timeSpentAgainstWall += msPerFrame;
-	if (driver->burnTimer > 0)
-		driver->timeSpentBurnt += msPerFrame;
-	if (driver->squishTimer > 0)
-		driver->timeSpentSquished += msPerFrame;
+	VehPhysProc_Driving_DecrementTimerCounter(&driver->reserves, msPerFrame, &driver->timeSpentUsingReserves);
+	VehPhysProc_Driving_DecrementTimer(&driver->turbo_outsideTimer, msPerFrame);
+	VehPhysProc_Driving_DecrementTimer(&driver->VehFire_AudioCooldown, msPerFrame);
+	VehPhysProc_Driving_DecrementTimerCounter(&driver->set_0xF0_OnWallRub, msPerFrame, &driver->timeSpentAgainstWall);
+	VehPhysProc_Driving_DecrementTimer(&driver->jump_ForcedMS, msPerFrame);
+	VehPhysProc_Driving_DecrementTimer(&driver->jump_CooldownMS, msPerFrame);
+	VehPhysProc_Driving_DecrementTimer(&driver->jump_unknown, msPerFrame);
+	VehPhysProc_Driving_DecrementTimerCounter(&driver->burnTimer, msPerFrame, &driver->timeSpentBurnt);
+	VehPhysProc_Driving_DecrementTimerCounter(&driver->squishTimer, msPerFrame, &driver->timeSpentSquished);
+	VehPhysProc_Driving_DecrementTimer(&driver->StartDriving_0x60, msPerFrame);
+	VehPhysProc_Driving_DecrementTimer(&driver->StartRollback_0x280, msPerFrame);
 
 	// If Super Engine Cheat is not enabled
 	if (!(gameMode2 & CHEAT_ENGINE))
 	{
-		driver->superEngineTimer -= msPerFrame;
-		if (driver->superEngineTimer < 0)
-			driver->superEngineTimer = 0;
+		VehPhysProc_Driving_DecrementTimer(&driver->superEngineTimer, msPerFrame);
 	}
+
+	VehPhysProc_Driving_DecrementTimer(&driver->clockReceive, msPerFrame);
+	VehPhysProc_Driving_DecrementTimer(&driver->mashingXMakesItBig, msPerFrame);
 
 	// If invisible, without Permanent Invisibility cheat,
 	// dont remove invisibleTimer check, or an invalid
@@ -134,12 +142,13 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 
 	// === Check Last Place ===
 
-	int numDriverInRace = gGT->numPlyrCurrGame + gGT->numBotsNextGame;
-
 	// Last Place, and time is unfrozen
-	if (driver->driverRank == (numDriverInRace - 1))
-		if ((driver->actionsFlagSet & 0x40000) == 0)
-			driver->timeSpentInLastPlace += msPerFrame;
+	if ((((driver->driverRank == 7) && (gGT->numPlyrCurrGame == 1)) || ((driver->driverRank == 5) && (gGT->numPlyrCurrGame == 2)) ||
+	     ((driver->driverRank == 3) && ((u8)gGT->numPlyrCurrGame > 2))) &&
+	    ((driver->actionsFlagSet & 0x40000) == 0))
+	{
+		driver->timeSpentInLastPlace += msPerFrame;
+	}
 
 	// === Determine Hazard ===
 
@@ -244,11 +253,11 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 				// Use trigonometry with speed and
 				// clock timer to make the car waddle
 
-				driverTimer = driver->clockReceive >> 6;
+				driverTimer = ((u16)driver->clockReceive) >> 6;
 				if (driverTimer > 0x40)
 					driverTimer = 0x40;
 
-				timerHazard = driver->clockReceive << 4;
+				timerHazard = ((u16)driver->clockReceive) << 4;
 
 				// approximate trigonometry
 				approxTrig = *(int *)&data.trigApprox[(timerHazard & 0x3ff)];
@@ -264,10 +273,8 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 				if (approximateSpeed2 > 0x20)
 					approximateSpeed2 = 0x20;
 
-#ifndef REBUILD_PS1
 				// gamepad vibration
 				GAMEPAD_ShockForce1(driver, 4, driverTimer + (approxTrig >> 5) + approximateSpeed2 + 0x18);
-#endif
 
 				driverTimerNegativeFinal = driverTimerNegativePrelim | 1;
 			}
@@ -317,23 +324,32 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 	// === Item Used By Player ===
 
 
-	// Make Item fade away from icon
-	if (driver->noItemTimer > 0)
-		driver->noItemTimer--;
-
-	// if Item is about to be gone and Number of Items = 0
-	if ((driver->noItemTimer == 1) && (driver->numHeldItems == 0))
+	noItemTimer = driver->noItemTimer;
+	if (noItemTimer != 0)
 	{
-		if (
-		    // multiplayer game, not battle, weapon was 3 missiles
-		    (2 < (u8)gGT->numPlyrCurrGame) && ((gGT->gameMode1 & BATTLE_MODE) == 0) && (driver->heldItemID == 0xB) && (gGT->numPlayersWith3Missiles > 0))
+		// if Item is about to be gone and Number of Items = 0
+		if ((noItemTimer == 1) && (driver->numHeldItems == 0))
 		{
-			// keep count
-			gGT->numPlayersWith3Missiles--;
+			if (
+			    // multiplayer game, not battle, weapon was 3 missiles
+			    (2 < (u8)gGT->numPlyrCurrGame) && ((gGT->gameMode1 & BATTLE_MODE) == 0) && (driver->heldItemID == 0xB) && (gGT->numPlayersWith3Missiles > 0))
+			{
+				// keep count
+				gGT->numPlayersWith3Missiles--;
+			}
+
+			// take away weapon
+			driver->heldItemID = 0xf;
 		}
 
-		// take away weapon
-		*(u8 *)&driver->heldItemID = 0xf;
+		driver->noItemTimer = noItemTimer - 1;
+	}
+
+	if (driver->invincibleTimer != 0)
+	{
+		driver->invincibleTimer -= msPerFrame;
+		if (driver->invincibleTimer < 0)
+			driver->invincibleTimer = 0;
 	}
 
 
@@ -368,8 +384,6 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 
 	// destination
 	normDst = &driver->AxisAngle4_normalVec[0];
-	if (driver->normalVecID == -1)
-		normDst = &driver->AxisAngle3_normalVec[0];
 	driver->normalVecID = 0;
 
 	// source
@@ -491,27 +505,21 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 				// wait 5 frames before next weapon use
 				driver->noItemTimer = 5;
 
-// no spring in final game
-#if 0
-
 				// If you have the Spring weapon
 				if (heldItemID == 5)
 				{
-					if (
-						(driver->jump_CoyoteTimerMS != 0) &&
-						(driver->jump_CooldownMS == 0)
-					   )
+					if ((driver->jump_CoyoteTimerMS != 0) && (driver->jump_CooldownMS == 0))
 					{
 						driver->numHeldItems--;
 					}
 				}
-				
-				else
-#endif
 
-				// only reduce numHeldItem if not using item cheats
-				if ((gameMode2 & (CHEAT_BOMBS | CHEAT_TURBO | CHEAT_MASK)) == 0)
-					driver->numHeldItems--;
+				else
+				{
+					// only reduce numHeldItem if not using item cheats
+					if ((gameMode2 & (CHEAT_BOMBS | CHEAT_TURBO | CHEAT_MASK)) == 0)
+						driver->numHeldItems--;
+				}
 			}
 		}
 	}
@@ -571,7 +579,6 @@ CheckJumpButtons:
 			actionsFlagSetCopy |= 4;
 		}
 	}
-#if !defined(USE_RETROFUELED)
 	if (
 	    // If you are holding Square
 	    (square != 0) &&
@@ -582,32 +589,6 @@ CheckJumpButtons:
 		// Set Reserves to zero
 		driver->reserves = 0;
 	}
-#else
-	// Assume you're holding cross (X)
-	u8 assumeCross = 0x10;
-	// if you are holding square
-	if (square != 0)
-	{
-		// held DOWN or have landing boost
-		if ((ptrgamepad->buttonsHeldCurrFrame & BTN_DOWN) || (driver->jump_LandingBoost))
-		{
-			// if not holding cross (X)
-			if (cross == 0)
-			{
-				assumeCross = 0;
-			}
-			goto SKIP_RESERVE_RESET;
-		}
-	SKIP_RF:
-		// you're on a turbo pad
-		if (driver->stepFlagSet & 0x3)
-			goto SKIP_RESERVE_RESET;
-
-		// Set Reserves to zero
-		driver->reserves = 0;
-	}
-SKIP_RESERVE_RESET:
-#endif
 
 	// assume normal gas pedal
 	stickRY = 0x80;
@@ -650,13 +631,9 @@ SKIP_RESERVE_RESET:
 			square = 0;
 		}
 
-#if !defined(USE_RETROFUELED)
 		// Assume you're holding Cross, because
 		// you have Reserves and you aren't slowing down
 		cross = 0x10;
-#else
-		cross = assumeCross;
-#endif
 	}
 
 
@@ -691,14 +668,7 @@ SKIP_RESERVE_RESET:
 
 	// with one wumpa, (25600 in rewrite, 13169 in original)
 
-#ifdef REBUILD_PC
-	// buggy, experimental
-	// driverBaseSpeed = DECOMP_VehPhysGeneral_GetBaseSpeed(driver);
-	driverBaseSpeed = driver->const_Speed_ClassStat;
-#else
-	// original, for decomp
 	driverBaseSpeed = VehPhysGeneral_GetBaseSpeed(driver);
-#endif
 
 	driverBaseSpeedUshort = driverBaseSpeed;
 
@@ -915,13 +885,6 @@ SKIP_RESERVE_RESET:
 	// brakes
 	if ((uVar20 & 0x800020) == 0)
 	{
-#ifdef REBUILD_PC
-		// no collision, no "found" quadblock, no "known"
-		// terrain, so for now, assume asphalt
-		driver->terrainMeta1 = &data.MetaDataTerrain[0];
-		driver->terrainMeta2 = &data.MetaDataTerrain[0];
-#endif
-
 		driverSpeedOrSmth = driver->terrainMeta2->unk_0x8;
 
 		if (driverSpeedOrSmth != 0x100)
@@ -1094,19 +1057,3 @@ void DECOMP_VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver 
 {
 	VehPhysProc_Driving_PhysLinear(thread, driver);
 }
-
-#define DriverPhysLinear_OFFSETOF(TYPE, ELEMENT) (s16)((u32) & (((TYPE *)0)->ELEMENT))
-s16 PhysLinear_DriverOffsets[14] = {DriverPhysLinear_OFFSETOF(struct Driver, reserves),
-                                    DriverPhysLinear_OFFSETOF(struct Driver, set_0xF0_OnWallRub),
-                                    DriverPhysLinear_OFFSETOF(struct Driver, burnTimer),
-                                    DriverPhysLinear_OFFSETOF(struct Driver, squishTimer),
-                                    DriverPhysLinear_OFFSETOF(struct Driver, turbo_outsideTimer),
-                                    DriverPhysLinear_OFFSETOF(struct Driver, VehFire_AudioCooldown),
-                                    DriverPhysLinear_OFFSETOF(struct Driver, jump_ForcedMS),
-                                    DriverPhysLinear_OFFSETOF(struct Driver, jump_CooldownMS),
-                                    DriverPhysLinear_OFFSETOF(struct Driver, jump_unknown),
-                                    DriverPhysLinear_OFFSETOF(struct Driver, StartDriving_0x60),
-                                    DriverPhysLinear_OFFSETOF(struct Driver, StartRollback_0x280),
-                                    DriverPhysLinear_OFFSETOF(struct Driver, clockReceive),
-                                    DriverPhysLinear_OFFSETOF(struct Driver, mashingXMakesItBig),
-                                    DriverPhysLinear_OFFSETOF(struct Driver, invincibleTimer)};
