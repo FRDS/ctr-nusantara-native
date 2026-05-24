@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003266c-0x800326b4.
 int DECOMP_LOAD_HowlSectorChainEnd()
 {
 	int *howlChainParams;
