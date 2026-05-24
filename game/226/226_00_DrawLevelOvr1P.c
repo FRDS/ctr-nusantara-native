@@ -2815,6 +2815,10 @@ static int DrawLevelOvr1P_EmitProjectedGridFaceCommon(struct PushBuffer *pb, str
 		                                                          inheritedOtIndex);
 	}
 
+	// NOTE(aalhendi): Retail 0x800a82a0/0x800a9ec0 stores caller t2 before
+	// packed-SXY/offscreen and NCLIP reduce it to the surviving direct mask.
+	*CTR_SCRATCHPAD_PTR(u32, 0x70) = allowedMask;
+
 	if (DrawLevelOvr1P_IsProjectedFaceOffscreen(pb, projected, indices))
 		return 1;
 
