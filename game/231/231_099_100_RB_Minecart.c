@@ -217,8 +217,8 @@ void DECOMP_RB_Minecart_LInB(struct Instance *inst)
 		// 50 points (0x32)
 		startIndex = spawnType2->numCoords;
 
-		// #2
-		if (minecartID == 2)
+		// #2 and any other non-0/non-1 suffix
+		if (minecartID != 1)
 			startIndex = startIndex << 1;
 
 		startIndex = startIndex / 3;
@@ -229,7 +229,6 @@ void DECOMP_RB_Minecart_LInB(struct Instance *inst)
 	// #2 = 66%
 
 	minecartObj->posIndex = startIndex;
-	startIndex *= 3;
 
 	RB_Minecart_NewPoint(inst, minecartObj, spawnType2);
 
