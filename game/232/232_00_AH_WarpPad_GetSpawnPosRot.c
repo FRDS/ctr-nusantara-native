@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800abafc-0x800abbdc.
 s16 *AH_WarpPad_GetSpawnPosRot(s16 *posData)
 {
 	struct Thread *t;

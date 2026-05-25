@@ -1,10 +1,12 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800af7f0-0x800af9f8.
 void AH_SaveObj_LInB(struct Instance *savInst)
 {
 	s16 rot[3];
 
 	struct GameTracker *gGT = sdata->gGT;
+	struct SpawnType2 *spawn;
 	struct Thread *t;
 	struct Instance *inst;
 	struct SaveObj *save;
@@ -14,7 +16,7 @@ void AH_SaveObj_LInB(struct Instance *savInst)
 	{
 		t = PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(sizeof(struct SaveObj), NONE, SMALL, STATIC),
 
-		                         AH_SaveObj_ThTick, 0, 0);
+		                         AH_SaveObj_ThTick, R232.s_saveobj, 0);
 
 		savInst->thread = t;
 
@@ -35,42 +37,30 @@ void AH_SaveObj_LInB(struct Instance *savInst)
 			// make invisible
 			savInst->flags |= 0x80;
 
-			if (gGT->level1->numSpawnType2_PosRot == 0)
+			spawn = gGT->level1->ptrSpawnType2_PosRot;
+
+			if (spawn == NULL)
 			{
 				save->inst = NULL;
 			}
-			// if numSpawn1 is more than zero
 			else
 			{
-				// DAT_800aba80
-				// "scan"
+				inst = INSTANCE_Birth3D(gGT->modelPtr[STATIC_SCAN], R232.s_scan, 0);
+				save->inst = inst;
 
-				inst = INSTANCE_Birth3D(gGT->modelPtr[STATIC_SCAN], 0, 0);
+				memcpy(&inst->matrix, &savInst->matrix, sizeof(inst->matrix));
 
-				inst->matrix.m[0][0] = savInst->matrix.m[0][0];
-				inst->matrix.m[0][2] = savInst->matrix.m[0][2];
-				inst->matrix.m[1][1] = savInst->matrix.m[1][1];
-				inst->matrix.m[2][0] = savInst->matrix.m[2][0];
-				inst->matrix.m[2][2] = savInst->matrix.m[2][2];
+				rot[0] = spawn->posCoords[3];
+				rot[1] = spawn->posCoords[4];
+				rot[2] = spawn->posCoords[5];
 
-				inst->matrix.t[0] = savInst->matrix.t[0];
-				inst->matrix.t[1] = savInst->matrix.t[1];
-				inst->matrix.t[2] = savInst->matrix.t[2];
+				ConvertRotToMatrix(&inst->matrix, rot);
 
-				rot[0] = gGT->level1->ptrSpawnType2_PosRot->posCoords[3];
-				rot[1] = gGT->level1->ptrSpawnType2_PosRot->posCoords[4];
-				rot[2] = gGT->level1->ptrSpawnType2_PosRot->posCoords[5];
-
-				// converted to TEST in rebuildPS1
-				ConvertRotToMatrix(&inst->matrix, (s16 *)&rot);
-
-				inst->matrix.t[0] = (int)gGT->level1->ptrSpawnType2_PosRot->posCoords[0];
-				inst->matrix.t[1] = (int)gGT->level1->ptrSpawnType2_PosRot->posCoords[1];
-				inst->matrix.t[2] = (int)gGT->level1->ptrSpawnType2_PosRot->posCoords[2];
+				inst->matrix.t[0] = spawn->posCoords[0];
+				inst->matrix.t[1] = spawn->posCoords[1];
+				inst->matrix.t[2] = spawn->posCoords[2];
 
 				inst->unk50 = 0xf8;
-
-				save->inst = inst;
 			}
 		}
 	}
