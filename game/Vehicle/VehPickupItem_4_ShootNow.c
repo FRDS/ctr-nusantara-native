@@ -276,7 +276,6 @@ void DECOMP_VehPickupItem_ShootNow(struct Driver *d, int weaponID, int flags)
 		weaponInst = DECOMP_INSTANCE_BirthWithThread(modelID, mineName, SMALL, MINE, DECOMP_RB_GenericMine_ThTick, sizeof(struct MineWeapon), 0);
 
 		dInst = d->instSelf;
-		d->instTntSend = weaponInst;
 
 		// copy matrix
 		*(int *)&weaponInst->matrix.m[0][0] = *(int *)&dInst->matrix.m[0][0];
@@ -389,6 +388,8 @@ void DECOMP_VehPickupItem_ShootNow(struct Driver *d, int weaponID, int flags)
 		}
 
 		VehPhysForce_RotAxisAngle(&weaponInst->matrix, rotPtr, d->angle);
+
+		d->instTntSend = weaponInst;
 
 		// dropped a mine
 		d->actionsFlagSet |= 0x80000000;
@@ -543,12 +544,10 @@ void DECOMP_VehPickupItem_ShootNow(struct Driver *d, int weaponID, int flags)
 	case 8:
 
 		d->numTimesClockWeaponUsed++;
-		d->clockSend = 0x1e;
 
 		OtherFX_Play(0x44, 1);
 
-		// if human and not AI (AIs can not use Clock)
-		// if((d->actionsFlagSet & 0x100000) == 0)
+		if ((d->actionsFlagSet & 0x100000) == 0)
 		{
 			Voiceline_RequestPlay(0xe, data.characterIDs[d->driverID], 0x10);
 		}
@@ -569,7 +568,10 @@ void DECOMP_VehPickupItem_ShootNow(struct Driver *d, int weaponID, int flags)
 			victim->clockFlash = 4;
 
 			if (victim == d)
+			{
+				d->clockSend = 0x1e;
 				continue;
+			}
 
 			// if spin out driver
 			if (DECOMP_RB_Hazard_HurtDriver(victim, 1, 0, 0) != 0)
@@ -630,6 +632,7 @@ void DECOMP_VehPickupItem_ShootNow(struct Driver *d, int weaponID, int flags)
 		tw->audioPtr = 0;
 		tw->ptrNodeNext = 0;
 		tw->respawnPointIndex = 0;
+		tw->turnAround = 0;
 		tw->driverParent = d;
 		tw->driverTarget = victim;
 		tw->instParent = dInst;
@@ -671,12 +674,13 @@ void DECOMP_VehPickupItem_ShootNow(struct Driver *d, int weaponID, int flags)
 		tw->ptrNodeNext = RB_Warpball_NewPathNode(tw->ptrNodeCurr, victim);
 
 		tw->vel[1] = 0;
-		tw->rotY = d->rotCurr.y;
+		tw->rotY = d->angle;
+		tw->frameCount_DontHurtParent = 10;
 
 		// do NOT patch for 60fps,
 		// velocity uses elapsedTime
-		tw->vel[0] = (weaponInst->matrix.m[0][2] * 7) >> 8;
-		tw->vel[2] = (weaponInst->matrix.m[2][2] * 7) >> 8;
+		tw->vel[0] = (dInst->matrix.m[0][2] * 7) >> 8;
+		tw->vel[2] = (dInst->matrix.m[2][2] * 7) >> 8;
 
 		struct Particle *p = Particle_Init(0, gGT->iconGroup[0], &data.emSet_Warpball[0]);
 
