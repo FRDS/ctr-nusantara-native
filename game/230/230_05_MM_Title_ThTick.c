@@ -96,10 +96,7 @@ void DECOMP_MM_Title_ThTick(struct Thread *title)
 				titleInst->animIndex = 1;
 			}
 
-#if 0
-	// remove dead code,
-	// specular light is not used on Trophy
-#endif
+			// TODO(aalhendi): Retail runs a GTE/specular-light block here; port it before stamping this function.
 		}
 	}
 
