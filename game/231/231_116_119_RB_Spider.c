@@ -169,166 +169,217 @@ s16 spiderArr[] = {
     // next 13
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b9848-0x800b9bc0.
+
 void DECOMP_RB_Spider_ThTick(struct Thread *t)
 {
 	s16 sVar2;
 	int iVar3;
 
+	char prevKartState;
+	struct GameTracker *gGT;
+	struct Instance *hitInst;
 	struct Driver *victim;
 	struct Instance *spiderInst;
-	struct Instance *coll;
 	struct Spider *spider;
 
 	spider = t->object;
 	spiderInst = t->inst;
 
-	// Sitting Spider
-	if (spider->animLoopCount < 4)
+	if (spider->delay != 0)
 	{
-		spiderInst->animFrame++;
-
-		iVar3 = DECOMP_INSTANCE_GetNumAnimFrames(spiderInst, 1);
-
-		// if Sitting animation is done
-		if (iVar3 <= spiderInst->animFrame)
-		{
-			spiderInst->animFrame = 0;
-			spider->animLoopCount++;
-
-			// ghidra source code says 5, but it is
-			// now 4, because of reordered logic
-			if (spider->animLoopCount == 4)
-			{
-				spiderInst->animIndex = 0;
-
-				if (spider->boolNearRoof == 0)
-				{
-					// start moving up (end of animation)
-					spiderInst->animFrame = DECOMP_INSTANCE_GetNumAnimFrames(spiderInst, 0) - 1;
-				}
-
-				else
-				{
-					// start moving down (start of animation)
-					spiderInst->animFrame = 0;
-
-#ifndef REBUILD_PS1
-					PlaySound3D(0x7a, spiderInst);
-#endif
-				}
-			}
-		}
+		spider->delay--;
+		return;
 	}
 
-	// Moving Spider
-	else
+	spider->unused++;
+
+	// If spider is on ground
+	if (spider->boolNearRoof == 0)
 	{
-		// If spider is on ground
-		if (spider->boolNearRoof == 0)
+		if (4 < spider->animLoopCount)
 		{
-			// === Spider Moving Up ===
-
 			// Play animation backwards
+			sVar2 = spiderInst->animFrame - 1;
 
-			spiderInst->animFrame--;
-
-			sVar2 = spiderInst->animFrame;
-
-			if (sVar2 == 0)
+			// if animation is at beginning
+			if (sVar2 < 1)
 			{
-				// reset loop, near roof, WiggleLegsAndTeeth
+				spiderInst->animFrame = 0;
 				spider->animLoopCount = 0;
 				spider->boolNearRoof = 1;
-				spiderInst->animIndex = 1;
+				goto setWiggleAnimation;
 			}
 
-#ifndef REBUILD_PS1
+			spiderInst->animFrame = sVar2;
+
 			// last frame of last animation
-			else if (sVar2 == 0xc)
+			if (sVar2 == 0xc)
 			{
-				// play sound: spider move up
 				PlaySound3D(0x79, spiderInst);
 			}
-#endif
+
+			goto updatePosScale;
 		}
 
-		// if spider is near ceiling
-		else
+		sVar2 = spiderInst->animFrame;
+		iVar3 = DECOMP_INSTANCE_GetNumAnimFrames(spiderInst, spiderInst->animIndex);
+
+		if (iVar3 <= sVar2 + 1)
 		{
-			// === Spider Moving Down ===
+			spiderInst->animFrame = 0;
+			sVar2 = spider->animLoopCount;
+			spider->animLoopCount = sVar2 + 1;
 
-			spiderInst->animFrame++;
-
-			sVar2 = spiderInst->animFrame;
-
-			iVar3 = DECOMP_INSTANCE_GetNumAnimFrames(spiderInst, 0);
-			if (iVar3 <= spiderInst->animFrame)
+			if ((s16)(sVar2 + 1) == 5)
 			{
-				// reset loop, not near roof, WiggleLegsAndTeeth
-				spider->animLoopCount = 0;
-				spider->boolNearRoof = 0;
-				spiderInst->animIndex = 1;
-				spiderInst->animFrame = 0;
+				spiderInst->animIndex = 0;
+				spiderInst->animFrame = DECOMP_INSTANCE_GetNumAnimFrames(spiderInst, 0) - 1;
 			}
-		}
 
-		spiderInst->matrix.t[1] = (int)spiderInst->instDef->pos[1] + spiderArr[sVar2];
-
-		// if animation frame is less than 11
-		if (sVar2 < 0xb)
-		{
-			// change spider scaleX and scaleZ based on animation frame
-			spider->shadowInst->scale[0] = (s16)((sVar2 << 0xc) / 10) + 0x1800;
-			spider->shadowInst->scale[2] = (s16)((sVar2 << 0xc) / 10) + 0x1800;
+			goto checkCollision;
 		}
 	}
 
-#ifndef REBUILD_PS1
-	Seal_CheckColl(spiderInst, t, 1, 0x9000, 0x7b);
-#endif
+	// if spider is near ceiling
+	else
+	{
+		if (4 < spider->animLoopCount)
+		{
+			sVar2 = spiderInst->animFrame;
+			iVar3 = DECOMP_INSTANCE_GetNumAnimFrames(spiderInst, 0);
+
+			if (sVar2 + 1 < iVar3)
+			{
+				spiderInst->animFrame++;
+			}
+			else
+			{
+				spider->animLoopCount = 0;
+				spider->boolNearRoof = 0;
+			setWiggleAnimation:
+				spiderInst->animIndex = 1;
+			}
+
+		updatePosScale:
+			spiderInst->matrix.t[1] = (int)spiderInst->instDef->pos[1] + spiderArr[spiderInst->animFrame];
+
+			if (spiderInst->animFrame < 0xb)
+			{
+				spider->shadowInst->scale[0] = (s16)((spiderInst->animFrame << 0xc) / 10) + 0x1800;
+				spider->shadowInst->scale[2] = (s16)((spiderInst->animFrame << 0xc) / 10) + 0x1800;
+			}
+
+			goto checkCollision;
+		}
+
+		sVar2 = spiderInst->animFrame;
+		iVar3 = DECOMP_INSTANCE_GetNumAnimFrames(spiderInst, spiderInst->animIndex);
+
+		if (iVar3 <= sVar2 + 1)
+		{
+			spiderInst->animFrame = 0;
+			sVar2 = spider->animLoopCount;
+			spider->animLoopCount = sVar2 + 1;
+
+			if ((s16)(sVar2 + 1) == 5)
+			{
+				spiderInst->animIndex = 0;
+				spiderInst->animFrame = 0;
+				PlaySound3D(0x7a, spiderInst);
+			}
+
+			goto checkCollision;
+		}
+	}
+
+	spiderInst->animFrame++;
+
+checkCollision:
+	gGT = sdata->gGT;
+
+	hitInst = (struct Instance *)DECOMP_LinkedCollide_Radius(spiderInst, t, gGT->threadBuckets[PLAYER].thread, 0x9000);
+	if (hitInst == NULL)
+	{
+		hitInst = (struct Instance *)DECOMP_LinkedCollide_Radius(spiderInst, t, gGT->threadBuckets[ROBOT].thread, 0x9000);
+		if (hitInst == NULL)
+		{
+			hitInst = (struct Instance *)DECOMP_LinkedCollide_Radius(spiderInst, t, gGT->threadBuckets[MINE].thread, 0x9000);
+			if (hitInst != NULL)
+			{
+				hitInst->thread->funcThCollide(hitInst->thread);
+			}
+
+			return;
+		}
+
+		victim = (struct Driver *)hitInst->thread->object;
+		DECOMP_RB_Hazard_HurtDriver(victim, 1, 0, 0);
+		return;
+	}
+
+	victim = (struct Driver *)hitInst->thread->object;
+	prevKartState = victim->kartState;
+	if ((DECOMP_RB_Hazard_HurtDriver(victim, 1, 0, 0) != 0) && (prevKartState != KS_SPINNING))
+	{
+		OtherFX_Play(0x7b, 1);
+		Voiceline_RequestPlay(1, data.characterIDs[victim->driverID], 0x10);
+	}
 }
+
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b9bc0-0x800b9bd4.
+
+int DECOMP_RB_Spider_ThCollide(struct Thread *thread)
+{
+	return thread->modelIndex == DYNAMIC_PLAYER;
+}
+
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b9bd4-0x800b9dd8.
 
 void DECOMP_RB_Spider_LInB(struct Instance *inst)
 {
 	struct Spider *spider;
 	s16 rot[3];
+	struct Thread *t;
+	struct Instance *shadowInst;
+	int spiderID;
 
-// Spider and Turtle break PC?
-// Too many polygons?
-#ifdef REBUILD_PC
-	inst->flags |= 0x80;
-	return;
-#endif
+	if (inst->thread != NULL)
+		return;
 
-	struct Thread *t = DECOMP_PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(sizeof(struct Spider), NONE, SMALL, SPIDER),
-
-	                                               DECOMP_RB_Spider_ThTick, 0, 0);
-
+	t = DECOMP_PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(sizeof(struct Spider), NONE, SMALL, SPIDER), DECOMP_RB_Spider_ThTick, "spider", 0);
+	inst->thread = t;
 	if (t == NULL)
 		return;
-	inst->thread = t;
+
+	spider = t->object;
+	t->funcThCollide = (void (*)(struct Thread *))DECOMP_RB_Spider_ThCollide;
 	t->inst = inst;
 
-	inst->animIndex = 1;
 	inst->scale[0] = 0x1c00;
 	inst->scale[1] = 0x1c00;
 	inst->scale[2] = 0x1c00;
+	inst->animIndex = 1;
 
-	spider = t->object;
+	spiderID = inst->name[strlen(inst->name) - 1] - '0';
+	spider->spiderID = spiderID;
 	spider->boolNearRoof = 1;
 	spider->animLoopCount = 0;
-	spider->spiderID = inst->name[7] - '0';
 
-	if (spider->spiderID == 3)
+	if (spiderID == 3)
 	{
-		t->cooldownFrameCount = 91;
+		spider->delay = 91;
 	}
-	else if (spider->spiderID == 2)
+	else if (spiderID == 2)
 	{
-		t->cooldownFrameCount = 69;
+		spider->delay = 69;
+	}
+	else
+	{
+		spider->delay = 0;
 	}
 
-	struct Instance *shadowInst = DECOMP_INSTANCE_Birth3D(sdata->gGT->modelPtr[DYNAMIC_SPIDERSHADOW], 0, t);
+	shadowInst = DECOMP_INSTANCE_Birth3D(sdata->gGT->modelPtr[DYNAMIC_SPIDERSHADOW], 0, t);
 
 	spider->shadowInst = shadowInst;
 

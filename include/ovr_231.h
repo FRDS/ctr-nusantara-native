@@ -612,7 +612,6 @@ struct Spider
 	s16 spiderID;
 
 	// 0x4
-	// unused, use t->cooldownFrameCount instead
 	s16 delay;
 
 	// 0x6

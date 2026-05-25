@@ -411,6 +411,7 @@
 
 #include "game/LibraryOfModels/LibraryOfModels_1_Clear.c"
 
+#include "game/LinkedCollide/LinkedCollide_0_Radius.c"
 #include "game/LinkedCollide/LinkedCollide_2_Hitbox.c"
 
 #include "game/LIST/LIST_0_Clear.c"
