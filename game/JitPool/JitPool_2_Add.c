@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800310d4-0x8003112c.
 int JitPool_Add(struct JitPool *AP)
 {
 	struct Item *item;

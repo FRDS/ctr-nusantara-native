@@ -1,32 +1,25 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80041e20-0x80041e9c.
 void PROC_DestroyObject(void *object, int threadFlags)
 {
-	struct JitPool *allPools;
 	struct JitPool *myPool;
-	int index;
 
-	// TODO: need an array and enum for this
-	allPools = &sdata->gGT->JitPools.thread;
+	if (object == NULL)
+		return;
 
-	// 0x100 - largeStackPool	(0x1970) [4]
-	// 0x200 - medStackPool		(0x1948) [3]
-	// 0x300 - smallStackPool	(0x1920) [2]
-
-	// index is now 1,2,3
-	index = (threadFlags >> 8) & 3;
-
-	// index is now 4,3,2
-	index = 5 - index;
-
-	// small, med, large
-	myPool = &allPools[index];
+	if ((threadFlags & 0x300) == 0x100)
+		myPool = &sdata->gGT->JitPools.largeStack;
+	else if ((threadFlags & 0x300) == 0x200)
+		myPool = &sdata->gGT->JitPools.mediumStack;
+	else
+		myPool = &sdata->gGT->JitPools.smallStack;
 
 	// in allocation, "next" and "prev" are abstracted
 	// with obj+=8, so not all structs need "next" and "prev",
 	// now subtract 8 bytes to access those two pointers
-	object = (void *)((u32)object - 8);
+	object = (void *)((u8 *)object - 8);
 
 	// add object back to free list
-	LIST_AddFront(&myPool->free, object);
+	LIST_AddFront(&myPool->free, (struct Item *)object);
 }

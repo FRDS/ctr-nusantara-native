@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80041e9c-0x80041f04.
 void PROC_DestroySelf(struct Thread *t)
 {
 	// thread must exist

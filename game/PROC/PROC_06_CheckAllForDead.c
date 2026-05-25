@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80041ff4-0x8004205c.
 void PROC_CheckAllForDead()
 {
 	int i;

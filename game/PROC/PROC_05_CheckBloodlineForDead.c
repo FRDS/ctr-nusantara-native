@@ -1,9 +1,12 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80041f58-0x80041ff4.
 void PROC_CheckBloodlineForDead(struct Thread **replaceSelf, struct Thread *th)
 {
 	while (th != 0)
 	{
+		struct Thread *siblingThread = th->siblingThread;
+
 		// if this thread is alive
 		if ((th->flags & 0x800) == 0)
 		{
@@ -32,13 +35,13 @@ void PROC_CheckBloodlineForDead(struct Thread **replaceSelf, struct Thread *th)
 			PROC_DestroySelf(th);
 
 			// replace thread with pointer to it's own sibling
-			*replaceSelf = th->siblingThread;
+			*replaceSelf = siblingThread;
 
 			// dont overwrite replaceSelf like in previous
 			// "if" block, cause the next dead sibling can
 			// still take the place in replaceSelf
 		}
 
-		th = th->siblingThread;
+		th = siblingThread;
 	}
 }
