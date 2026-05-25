@@ -1,27 +1,18 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800aff58-0x800affd0.
 char MM_TrackSelect_boolTrackOpen(struct MainMenu_LevelRow *menuSelect)
 {
 	s16 flag = menuSelect->unlock;
-	char unlocked = false;
 
-	if (
-	    // -1, always unlocked by default
-	    flag == -1 ||
+	if (flag == -1)
+		return true;
 
-	    // -2, Oxide Station, unlocked by default only on 1P.
-	    (flag == -2
+	if (flag == -2)
+		return sdata->gGT->numPlyrNextGame == 1;
 
-	     && sdata->gGT->numPlyrNextGame == 1) ||
+	if (flag < 0)
+		return false;
 
-	    // track has requirements AND requirements is met
-	    (flag >= -1
-
-	     && ((sdata->gameProgress.unlocks[flag >> 5] >> flag) & 1)))
-	{
-		// unlock track
-		unlocked = true;
-	}
-
-	return unlocked;
+	return (sdata->gameProgress.unlocks[flag >> 5] >> (flag & 0x1f)) & 1;
 }

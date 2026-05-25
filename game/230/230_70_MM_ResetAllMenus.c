@@ -1,13 +1,14 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800b42b0-0x800b4334.
 void MM_ResetAllMenus(void)
 {
 	for (int i = 0; i < 9; i++)
 	{
 		struct RectMenu *menu = D230.arrayMenuPtrs[i];
 
-// PC doesn't "reload" 230 cause it's all
-// in the executable. Do manual clearing
+// NOTE(aalhendi): Retail resets one menu per array slot; native walks chained
+// menus because overlay 230 data is not reloaded.
 #ifdef REBUILD_PC
 		do
 		{

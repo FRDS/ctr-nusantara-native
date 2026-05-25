@@ -1,11 +1,11 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800ac178-0x800ac1f0.
 void MM_Title_SetTrophyDPP(void)
 {
 	u32 idpp2_b8;
 	struct InstDrawPerPlayer *idpp1;
 	struct InstDrawPerPlayer *idpp2;
-	struct Instance **instArr;
 	struct Title *title = D230.titleObj;
 	int e4;
 	int e8;
@@ -24,12 +24,10 @@ void MM_Title_SetTrophyDPP(void)
 	idpp2_b8 |= 0xffffffbf;
 	idpp1->instFlags &= idpp2_b8;
 
-	// ASM optimization, put all LWs together
 	e4 = idpp2->unkE4;
 	e8 = idpp2->unkE8;
 	dc = *(int *)&idpp2->depthOffset[0];
 
-	// ASM optimization, put all SWs together
 	idpp1->unkE4 = e4;
 	idpp1->unkE8 = e8;
 	*(int *)&idpp1->depthOffset[0] = dc;
