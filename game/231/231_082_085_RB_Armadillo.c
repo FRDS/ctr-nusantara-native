@@ -2,42 +2,13 @@
 
 void Seal_CheckColl(struct Instance *sealInst, struct Thread *sealTh, int damage, int radius, int sound);
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b5984-0x800b5f50.
+
 void DECOMP_RB_Armadillo_ThTick_Rolling(struct Thread *t);
 
-void RB_Armadillo_ThTick_Flip(struct Thread *t)
+int DECOMP_RB_Armadillo_ThCollide(struct Thread *thread)
 {
-	struct Instance *armInst;
-	struct Armadillo *armObj;
-	int i;
-
-	armInst = t->inst;
-	armObj = (struct Armadillo *)t->object;
-
-	// if animation is not over
-	if ((armInst->animFrame + 1) < DECOMP_INSTANCE_GetNumAnimFrames(armInst, 0))
-	{
-		// increment frame
-		armInst->animFrame = armInst->animFrame + 1;
-
-		Seal_CheckColl(armInst, t, 1, 0x2400, 0x71);
-		return;
-	}
-
-	// === End of Flip ===
-
-	armObj->velX = -armObj->velX;
-	armObj->velZ = -armObj->velZ;
-
-#ifndef REBUILD_PS1
-	// play roll sound
-	PlaySound3D(0x70, armInst);
-#endif
-
-	// rolling animation
-	armInst->animFrame = 0;
-	armInst->animIndex = 1;
-
-	ThTick_SetAndExec(t, DECOMP_RB_Armadillo_ThTick_Rolling);
+	return thread->modelIndex == DYNAMIC_PLAYER;
 }
 
 void DECOMP_RB_Armadillo_ThTick_TurnAround(struct Thread *t)
@@ -49,74 +20,114 @@ void DECOMP_RB_Armadillo_ThTick_TurnAround(struct Thread *t)
 	armInst = t->inst;
 	armObj = (struct Armadillo *)t->object;
 
-	// spin rotCurrY 180 degrees (turn around)
-	armObj->rotCurr[1] = DECOMP_RB_Hazard_InterpolateValue(armObj->rotCurr[1], armObj->rotDesired[1], 0x100);
-
-	// increment frame
-	armInst->animFrame = armInst->animFrame + 1;
-
-	// converted to TEST in rebuildPS1
-	ConvertRotToMatrix(&armInst->matrix, &armObj->rotCurr[0]);
-
-	if (armObj->rotCurr[1] != armObj->rotDesired[1])
+	if (armObj->rotCurr[1] == armObj->rotDesired[1])
 	{
-		Seal_CheckColl(armInst, t, 1, 0x2400, 0x71);
-		return;
+		// if animation is not over
+		if ((armInst->animFrame + 1) < DECOMP_INSTANCE_GetNumAnimFrames(armInst, 0))
+		{
+			armInst->animFrame = armInst->animFrame + 1;
+		}
+
+		// === End of TurnAround ===
+		else
+		{
+			armObj->velX = -armObj->velX;
+			armObj->numFramesSpinning = 0;
+			armObj->velZ = -armObj->velZ;
+
+			armObj->direction = (armObj->direction == 0) ? 1 : 0;
+
+#ifndef REBUILD_PS1
+			// play roll sound
+			PlaySound3D(0x70, armInst);
+#endif
+
+			// rolling animation
+			armInst->animIndex = 1;
+			armInst->animFrame = 0;
+
+			ThTick_SetAndExec(t, DECOMP_RB_Armadillo_ThTick_Rolling);
+		}
 	}
 
-	// === End of TurnAround ===
+	else
+	{
+		// spin rotCurrY 180 degrees (turn around)
+		armObj->rotCurr[1] = DECOMP_RB_Hazard_InterpolateValue(armObj->rotCurr[1], armObj->rotDesired[1], 0x100);
 
-	ThTick_SetAndExec(t, RB_Armadillo_ThTick_Flip);
+		// converted to TEST in rebuildPS1
+		ConvertRotToMatrix(&armInst->matrix, &armObj->rotCurr[0]);
+
+		// increment frame
+		armInst->animFrame = armInst->animFrame + 1;
+	}
+
+	Seal_CheckColl(armInst, t, 1, 0x2400, 0x71);
 }
 
 void DECOMP_RB_Armadillo_ThTick_Rolling(struct Thread *t)
 {
 	struct Instance *armInst;
 	struct Armadillo *armObj;
+	SVECTOR rot;
 	int i;
 
 	armInst = t->inst;
 	armObj = (struct Armadillo *)t->object;
 
-	// if animation is not over
-	if ((armInst->animFrame + 1) < DECOMP_INSTANCE_GetNumAnimFrames(armInst, 1))
+	if (armObj->timeAtEdge != 0)
 	{
-		// increment frame
-		armInst->animFrame = armInst->animFrame + 1;
+		armObj->timeAtEdge--;
+		return;
 	}
 
-	// if animation is done
-	else
+	if (armObj->timeRolling < 0x500)
 	{
-		// reset animation
-		armInst->animFrame = 0;
+		// 32ms, 30fps
+		armObj->timeRolling += 0x20;
 
-		// no sound here
-	}
+		if (armObj->direction == 0)
+			armObj->distFromSpawn++;
+		else
+			armObj->distFromSpawn--;
 
-	// 32ms, 30fps
-	armObj->timeRolling += 0x20;
+		armInst->matrix.t[0] += armObj->velX;
+		armInst->matrix.t[2] += armObj->velZ;
 
-	armInst->matrix.t[0] += armObj->velX;
-	armInst->matrix.t[2] += armObj->velZ;
+		// if animation is not over
+		if ((armInst->animFrame + 1) < DECOMP_INSTANCE_GetNumAnimFrames(armInst, 1))
+		{
+			// increment frame
+			armInst->animFrame = armInst->animFrame + 1;
+		}
 
-	// if 1.333 seconds passed, (40 frames)
-	// could be >= if using accurate ms clock
-	if (armObj->timeRolling != 0x500)
-	{
+		// if animation is done
+		else
+		{
+			// reset animation
+			armInst->animFrame = 0;
+
+			// no sound here
+		}
+
 		Seal_CheckColl(armInst, t, 1, 0x2400, 0x71);
 		return;
 	}
 
 	// == End of Rolling ===
+	CTR_MatrixToRot(&rot, &armInst->matrix, 0x11);
 
 	// reset
+	armObj->rotCurr[0] = rot.vy;
+	armObj->rotCurr[1] = rot.vx;
+	armObj->rotCurr[2] = rot.vz;
 	armObj->timeRolling = 0;
-	armObj->rotDesired[1] = (armObj->rotCurr[1] + 0x800) & 0xfff;
 
-	// rolling animation
-	armInst->animFrame = 0;
+	// jumping animation
 	armInst->animIndex = 0;
+	armInst->animFrame = 0;
+
+	armObj->rotDesired[1] = (armObj->rotCurr[1] + 0x800) & 0xfff;
 
 	ThTick_SetAndExec(t, DECOMP_RB_Armadillo_ThTick_TurnAround);
 }
@@ -124,15 +135,20 @@ void DECOMP_RB_Armadillo_ThTick_Rolling(struct Thread *t)
 void DECOMP_RB_Armadillo_LInB(struct Instance *inst)
 {
 	struct Armadillo *armObj;
-	struct InstDef *instDef;
+	SVECTOR rot;
 	s16 *metaArray;
+	void **pointers;
+	struct Thread *t;
 
-	struct Thread *t = DECOMP_PROC_BirthWithObject(
+	if (inst->thread != 0)
+		return;
+
+	t = DECOMP_PROC_BirthWithObject(
 	    // creation flags
 	    SIZE_RELATIVE_POOL_BUCKET(sizeof(struct Armadillo), NONE, SMALL, STATIC),
 
 	    DECOMP_RB_Armadillo_ThTick_Rolling, // behavior
-	    0,                                  // debug name
+	    "armadillo",                        // debug name
 	    0                                   // thread relative
 	);
 
@@ -140,11 +156,7 @@ void DECOMP_RB_Armadillo_LInB(struct Instance *inst)
 		return;
 	inst->thread = t;
 	t->inst = inst;
-
-	// puts armadillos on separate cycles
-	void **pointers = ST1_GETPOINTERS(sdata->gGT->level1->ptrSpawnType1);
-	metaArray = (s16 *)pointers[ST1_SPAWN];
-	t->cooldownFrameCount = metaArray[inst->name[0xA] - '0'];
+	t->funcThCollide = (void (*)(struct Thread *))DECOMP_RB_Armadillo_ThCollide;
 
 	// rolling animation
 	inst->animFrame = 0;
@@ -152,17 +164,29 @@ void DECOMP_RB_Armadillo_LInB(struct Instance *inst)
 
 	armObj = ((struct Armadillo *)t->object);
 	armObj->timeRolling = 0;
+	armObj->numFramesSpinning = 0;
 	armObj->timeAtEdge = 0;
 
+	CTR_MatrixToRot(&rot, &inst->matrix, 0x11);
+	armObj->rotCurr[0] = rot.vy;
+	armObj->rotCurr[1] = rot.vx;
+	armObj->rotCurr[2] = rot.vz;
+
+	armObj->rotDesired[1] = (armObj->rotCurr[1] + 0x800) & 0xfff;
+
+	armObj->distFromSpawn = 0;
 	armObj->spawnPosX = inst->matrix.t[0];
 	armObj->spawnPosZ = inst->matrix.t[2];
+	armObj->direction = 0;
 
 	armObj->velX = inst->matrix.m[0][2] >> 7;
 	armObj->velZ = inst->matrix.m[2][2] >> 7;
 
-	// optimization,
-	// rot[0] and rot[1] are always zero
-	armObj->rotCurr[1] = inst->instDef->rot[1];
-	armObj->rotCurr[0] = 0;
-	armObj->rotCurr[2] = 0;
+	if (sdata->gGT->level1->ptrSpawnType1->count <= 0)
+		return;
+
+	// puts armadillos on separate cycles
+	pointers = ST1_GETPOINTERS(sdata->gGT->level1->ptrSpawnType1);
+	metaArray = (s16 *)pointers[ST1_SPAWN];
+	armObj->timeAtEdge = metaArray[inst->name[strlen(inst->name) - 1] - '0'];
 }
