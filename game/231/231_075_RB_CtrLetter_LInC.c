@@ -1,54 +1,31 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b5210-0x800b52dc.
+
 int DECOMP_RB_CtrLetter_LInC(struct Instance *letterInst, struct Thread *driverTh, struct ScratchpadStruct *sps)
 {
-	s16 posScreen[2];
-	MATRIX *m;
-	struct Driver *driver;
-	struct PushBuffer *pb;
-	int driverID;
-	int modelID;
+	typedef int (*CtrLetterCollideFunc)(struct Thread *, struct Thread *, void *, struct ScratchpadStruct *);
+	struct Thread *letterTh;
 
-	modelID = sps->Input1.modelID;
+	letterTh = letterInst->thread;
+	if (letterTh == NULL)
+	{
+		letterTh = DECOMP_PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(4, NONE, SMALL, STATIC), DECOMP_RB_CtrLetter_ThTick, "ctr", NULL);
 
-	// if crystal did not collide with
-	// DYNAMIC_PLAYER, quit function
-	if (modelID != DYNAMIC_PLAYER)
+		letterInst->thread = letterTh;
+		if (letterTh == NULL)
+			return 0;
+
+		letterTh->inst = letterInst;
+		letterTh->funcThCollide = (void (*)(struct Thread *))DECOMP_RB_CtrLetter_ThCollide;
+		letterTh = letterInst->thread;
+	}
+
+	if ((letterTh == NULL) || (letterTh->funcThCollide == NULL))
 		return 0;
 
-	// handle scale
 	if (letterInst->scale[0] == 0)
 		return 0;
-	letterInst->scale[0] = 0;
-	letterInst->scale[1] = 0;
-	letterInst->scale[2] = 0;
 
-	// kill thread
-	letterInst->thread->flags |= 0x800;
-	letterInst->thread = 0;
-
-	// play sound
-	PlaySound3D(100, letterInst);
-
-	// get driver object
-	driver = driverTh->object;
-	driverID = driver->driverID;
-
-	pb = &sdata->gGT->pushBuffer[driverID];
-	RB_Fruit_GetScreenCoords(pb, letterInst, &posScreen[0]);
-
-	// screenPosXY
-	driver->PickupLetterHUD.startX = pb->rect.x + posScreen[0];
-	driver->PickupLetterHUD.startY = pb->rect.y + posScreen[1] - 0x14;
-
-	// transition should last 10 frames
-	driver->PickupLetterHUD.cooldown = 10;
-
-	// increment number of items in hud
-	driver->PickupLetterHUD.numCollected++;
-
-	// which letter was grabbed
-	driver->PickupLetterHUD.modelID = letterInst->model->id;
-
-	return 1;
+	return ((CtrLetterCollideFunc)letterTh->funcThCollide)(letterTh, driverTh, letterTh->funcThCollide, sps);
 }

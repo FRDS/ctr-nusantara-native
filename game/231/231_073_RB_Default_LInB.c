@@ -1,10 +1,10 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b4fe4-0x800b5090.
+
 void DECOMP_RB_Default_LInB(struct Instance *inst)
 {
-	// low ram budget, can't use a regular pointer
-	register char *scratch asm("$at");
-	scratch = (char *)0x1f800000;
+	char *scratch = (char *)0x1f800000;
 
 	int var;
 

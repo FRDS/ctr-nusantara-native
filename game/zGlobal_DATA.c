@@ -44,9 +44,7 @@ void AH_Sign_LInB();
 
 // temporary, until 231 compiles into PC port
 #ifdef REBUILD_PC
-void DECOMP_RB_Default_LInB()
-{
-}
+// void DECOMP_RB_Default_LInB() {}	-- DONE
 void DECOMP_RB_Fruit_LInB()
 {
 }
@@ -77,12 +75,8 @@ void RB_Orca_LInB()
 void RB_Banner_LInB()
 {
 }
-void DECOMP_RB_CtrLetter_LInB()
-{
-}
-int DECOMP_RB_CtrLetter_LInC()
-{
-}
+// void DECOMP_RB_CtrLetter_LInB() {}	-- DONE
+// int DECOMP_RB_CtrLetter_LInC() {}	-- DONE
 // void DECOMP_RB_Crystal_LInB() {}	-- DONE
 // int DECOMP_RB_Crystal_LInC() {}	-- DONE
 // void DECOMP_RB_Teeth_LInB() {}	-- DONE
@@ -1652,18 +1646,15 @@ struct Data
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0x93 - STATIC_C
-                    // LInC should not birth a thread, nor call ThCollide,
-                    // LInC should only kill LInB's thread and trigger HUD
+                    // Retail LInC births a thread if missing, then calls ThCollide.
                     SET_MDM(NULL, DECOMP_RB_CtrLetter_LInB, DECOMP_RB_CtrLetter_LInC),
 
                     // 0x94 - STATIC_T
-                    // LInC should not birth a thread, nor call ThCollide,
-                    // LInC should only kill LInB's thread and trigger HUD
+                    // Retail LInC births a thread if missing, then calls ThCollide.
                     SET_MDM(NULL, DECOMP_RB_CtrLetter_LInB, DECOMP_RB_CtrLetter_LInC),
 
                     // 0x95 - STATIC_R
-                    // LInC should not birth a thread, nor call ThCollide,
-                    // LInC should only kill LInB's thread and trigger HUD
+                    // Retail LInC births a thread if missing, then calls ThCollide.
                     SET_MDM(NULL, DECOMP_RB_CtrLetter_LInB, DECOMP_RB_CtrLetter_LInC),
 
                     // 0x96 - STATIC_CRASHINTRO

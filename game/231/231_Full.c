@@ -65,8 +65,8 @@
 #include "231_061_068_RB_Crate.c"
 #include "231_069_072_RB_Crystal.c"
 
-// TODO(aalhendi): 231_073_RB_Default_LInB
-// TODO(aalhendi): 073-077 default LevInst and CTR letters.
+#include "231_073_RB_Default_LInB.c"
+#include "231_074_077_RB_CtrLetter_ThCollide.c"
 
 #include "231_082_085_RB_Armadillo.c"
 #include "231_086_088_RB_Fireball.c"

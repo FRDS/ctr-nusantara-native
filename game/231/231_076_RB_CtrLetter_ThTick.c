@@ -2,6 +2,8 @@
 
 s16 letterLightDir[4] = {0x94F, 0x94F, -0x94F, 0};
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b52dc-0x800b5334.
+
 void DECOMP_RB_CtrLetter_ThTick(struct Thread *t)
 {
 	int sine;
