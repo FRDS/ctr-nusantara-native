@@ -171,6 +171,24 @@ struct OverlayRDATA_232
 
 	// 0x800aba8c
 	s16 keyFrame[0xc];
+
+	// 0x800abaa4
+	char s_door[8];
+
+	// 0x800abaac
+	u32 warppadColorJumpTable[5];
+
+	// 0x800abac0
+	u32 unk_800abac0;
+
+	// 0x800abac4
+	char s_format[8];
+
+	// 0x800abacc
+	char s_PAUSE[8];
+
+	// 0x800abad4
+	char s_pause[8];
 };
 
 struct OverlayDATA_232

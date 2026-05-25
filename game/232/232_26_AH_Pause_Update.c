@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b3144-0x800b344c.
 void AH_Pause_Update()
 {
 	struct GameTracker *gGT;
@@ -10,7 +11,6 @@ void AH_Pause_Update()
 		struct PauseObject *ptrPauseObject;
 		ptrPauseObject = &D232.pauseObject;
 
-		D232.ptrPauseObject = ptrPauseObject;
 		D232.pausePageTimer = 0;
 		D232.pausePageCurr = gGT->levelID - GEM_STONE_VALLEY;
 		gGT->advPausePage = D232.pausePageCurr;
@@ -19,14 +19,16 @@ void AH_Pause_Update()
 		// 0 = no relation to param4
 		// 0x300 = SmallStackPool
 		// 0xd = "other" thread bucket
-		struct Thread *t = PROC_BirthWithObject(0x30d, 0, 0, 0);
+		struct Thread *t = PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(0, NONE, SMALL, OTHER), 0, R232.s_PAUSE, 0);
 
+		D232.ptrPauseObject = ptrPauseObject;
 		ptrPauseObject->t = t;
 
 		for (int i = 0; i < 0xe; i++)
 		{
-			struct Instance *inst = INSTANCE_Birth3D(gGT->modelPtr[STATIC_GEM], 0, t);
+			struct Instance *inst = INSTANCE_Birth3D(gGT->modelPtr[STATIC_GEM], R232.s_pause, t);
 
+			ptrPauseObject->PauseMember[i].indexAdvPauseInst = -1;
 			ptrPauseObject->PauseMember[i].inst = inst;
 			ptrPauseObject->PauseMember[i].rot[0] = 0;
 			ptrPauseObject->PauseMember[i].rot[1] = 0;
@@ -56,17 +58,7 @@ void AH_Pause_Update()
 
 	if ((tap & (BTN_RIGHT | BTN_LEFT)) != 0)
 	{
-		if ((tap & BTN_RIGHT) != 0)
-		{
-			D232.pausePageDir = 1;
-			gGT->advPausePage += 1;
-
-			if (gGT->advPausePage > 6)
-				gGT->advPausePage = 0;
-		}
-
-		// assume BTN_LEFT
-		else
+		if ((tap & BTN_LEFT) != 0)
 		{
 			D232.pausePageDir = -1;
 			gGT->advPausePage += -1;
@@ -75,12 +67,22 @@ void AH_Pause_Update()
 				gGT->advPausePage = 6;
 		}
 
+		// assume BTN_RIGHT
+		else
+		{
+			D232.pausePageDir = 1;
+			gGT->advPausePage += 1;
+
+			if (gGT->advPausePage > 6)
+				gGT->advPausePage = 0;
+		}
+
 		// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b3340-0x800b3350 for adventure pause page-turn SFX.
 		OtherFX_Play(0, 1);
 	}
 
 	// page is flipping
-	if (D232.pausePageTimer != 0)
+	if (D232.pausePageTimer > 0)
 		D232.pausePageTimer--;
 
 	// page is not flipping, flip desired
