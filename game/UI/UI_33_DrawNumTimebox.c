@@ -1,7 +1,6 @@
 #include <common.h>
 
-// 172 byte budget
-
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80050e6c-0x80050f18.
 void UI_DrawNumTimebox(s16 posX, s16 posY, struct Driver *d)
 {
 	int numCratesOwned;

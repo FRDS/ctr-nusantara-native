@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005111c-0x800511c0.
 void UI_DrawNumCrystal(s16 posX, s16 posY, struct Driver *d)
 {
 	int numCrystalsOwned;
