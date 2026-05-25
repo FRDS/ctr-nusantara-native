@@ -1,5 +1,13 @@
 #include <common.h>
 
+typedef int (*MovingExplosiveCollideFunc)(struct Thread *, struct Thread *, void *, struct ScratchpadStruct *);
+
+static void RB_MovingExplosive_CallThCollide(struct Thread *hitTh, struct Thread *sourceTh)
+{
+	void *funcThCollide = (void *)hitTh->funcThCollide;
+	((MovingExplosiveCollideFunc)funcThCollide)(hitTh, sourceTh, funcThCollide, NULL);
+}
+
 // function for moving bomb, shiledbomb, or missile
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800adb50-0x800ae478.
 void DECOMP_RB_MovingExplosive_ThTick(struct Thread *t)
@@ -53,6 +61,7 @@ LAB_800adc08:;
 
 	struct Driver *driverTarget = tw->driverTarget;
 
+	// NOTE(aalhendi): Native guard for retail's PS1 null-space shieldbomb path.
 	// driver not invisible
 	if ((driverTarget != 0) && (driverTarget->invisibleTimer == 0))
 	{
@@ -409,7 +418,7 @@ LAB_800adc08:;
 				// === missile ===
 				struct Thread *hitTh = hitInst->thread;
 
-				hitTh->funcThCollide(hitTh);
+				RB_MovingExplosive_CallThCollide(hitTh, t);
 			}
 		}
 
@@ -418,7 +427,7 @@ LAB_800adc08:;
 		{
 			struct Thread *hitTh = hitInst->thread;
 
-			hitTh->funcThCollide(hitTh);
+			RB_MovingExplosive_CallThCollide(hitTh, t);
 		}
 	}
 
