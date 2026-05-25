@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800afa44-0x800afa94.
 void MM_TrackSelect_Video_SetDefaults(void)
 {
 	// clear RECT

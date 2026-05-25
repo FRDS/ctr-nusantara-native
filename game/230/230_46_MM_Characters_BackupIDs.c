@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800ae274-0x800ae2c0.
 void MM_Characters_BackupIDs(void)
 {
 	char i;

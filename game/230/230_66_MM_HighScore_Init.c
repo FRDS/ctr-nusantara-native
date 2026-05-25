@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b3914-0x800b3954.
 void MM_HighScore_Init(void)
 {
 	D230.highScore_transitionState = ENTERING_MENU;
