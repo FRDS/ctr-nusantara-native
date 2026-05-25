@@ -293,7 +293,7 @@ void *DECOMP_LOAD_ReadFile_ex(/*struct BigHeader* bigfile,*/ u32 loadType, int s
 // void* DECOMP_LOAD_ReadFile(struct BigHeader* bigfile, /*u32 loadType,*/ int subfileIndex, void* destination, /*int *size,*/ void * callback);
 
 
-void *DECOMP_LOAD_VramFile(void *bigfilePtr, int subfileIndex /*, int* ptrDestination, int* size, int callbackOrFlags*/);
+void *DECOMP_LOAD_VramFile(void *bigfilePtr, int subfileIndex, void *ptrDestination, int *sizePtr, int callbackOrFlags);
 // void* DECOMP_LOAD_DramFile(void* bigfilePtr, int subfileIndex, int* ptrDestination, /*int* size,*/ int callbackOrFlags);
 void *DECOMP_LOAD_ReadDirectory(char *filename);
 void *DECOMP_LOAD_XnfFile(char *filename, void *ptrDestination, int *size);

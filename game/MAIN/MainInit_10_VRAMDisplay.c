@@ -1,5 +1,11 @@
 #include <common.h>
 
+#ifdef REBUILD_PC
+#include <PsyX/PsyX_render.h>
+#endif
+
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003c310-0x8003c41c; native wraps
+// the VRAM page moves in a platform frame for presentation.
 void DECOMP_MainInit_VRAMDisplay()
 {
 	RECT r;
@@ -7,10 +13,6 @@ void DECOMP_MainInit_VRAMDisplay()
 
 	s16 x[2];
 	s16 y[2];
-
-#ifdef REBUILD_PC
-	Platform_BeginFrame();
-#endif
 
 	x[0] = 0;
 	x[1] = 0x100;
@@ -37,6 +39,8 @@ void DECOMP_MainInit_VRAMDisplay()
 	}
 
 #ifdef REBUILD_PC
+	Platform_BeginFrame();
+	GR_PresentVRAMDisplay();
 	Platform_EndFrame();
 #endif
 }

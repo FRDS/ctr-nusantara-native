@@ -9,6 +9,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef _WIN32
@@ -1645,6 +1646,128 @@ void GR_UpdateVRAM()
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, VRAM_WIDTH, VRAM_HEIGHT, VRAM_FORMAT, GL_UNSIGNED_BYTE, vram);
 #endif
 
+#endif
+}
+
+static u_char GR_Expand5To8(u_short value)
+{
+	value &= 0x1f;
+	return (u_char)((value << 3) | (value >> 2));
+}
+
+static void GR_BuildDisplayChunkRGBA(u_char* dst, int srcX, int srcY, int w, int h)
+{
+	for (int y = 0; y < h; y++)
+	{
+		u_short* src = vram + srcX + (srcY + y) * VRAM_WIDTH;
+
+		for (int x = 0; x < w; x++)
+		{
+			u_short pixel = src[x];
+
+			*dst++ = GR_Expand5To8(pixel);
+			*dst++ = GR_Expand5To8(pixel >> 5);
+			*dst++ = GR_Expand5To8(pixel >> 10);
+			*dst++ = 0xff;
+		}
+	}
+}
+
+static void GR_FillDisplayChunkVerts(GrVertex* verts, int dstX, int dstY, int w, int h)
+{
+	const int maxU = w > 0 ? w - 1 : 0;
+	const int maxV = h > 0 ? h - 1 : 0;
+
+	memset(verts, 0, sizeof(GrVertex) * 6);
+
+	verts[0].x = dstX;
+	verts[0].y = dstY;
+	verts[0].u = 0;
+	verts[0].v = 0;
+
+	verts[1].x = dstX;
+	verts[1].y = dstY + h;
+	verts[1].u = 0;
+	verts[1].v = maxV;
+
+	verts[2].x = dstX + w;
+	verts[2].y = dstY + h;
+	verts[2].u = maxU;
+	verts[2].v = maxV;
+
+	verts[3] = verts[0];
+	verts[4] = verts[2];
+
+	verts[5].x = dstX + w;
+	verts[5].y = dstY;
+	verts[5].u = maxU;
+	verts[5].v = 0;
+
+	for (int i = 0; i < 6; i++)
+	{
+		verts[i].bright = 1;
+		verts[i].r = 0xff;
+		verts[i].g = 0xff;
+		verts[i].b = 0xff;
+		verts[i].a = 0xff;
+	}
+}
+
+void GR_PresentVRAMDisplay()
+{
+#if USE_OPENGL
+	const int displayX = activeDispEnv.disp.x;
+	const int displayY = activeDispEnv.disp.y;
+	const int displayW = activeDispEnv.disp.w;
+	const int displayH = activeDispEnv.disp.h;
+	const int maxChunkW = 0x100;
+	const int maxChunkH = 0x100;
+	const int maxChunkBytes = maxChunkW * maxChunkH * 4;
+
+	static TextureID displayTexture = (TextureID)-1;
+	static u_char* rgba = NULL;
+
+	if (displayW <= 0 || displayH <= 0)
+		return;
+
+	if (rgba == NULL)
+		rgba = (u_char*)malloc(maxChunkBytes);
+
+	if (rgba == NULL)
+		return;
+
+	if (displayTexture == (TextureID)-1)
+		displayTexture = GR_CreateRGBATexture(maxChunkW, maxChunkH, NULL);
+
+	GR_SetViewPort(0, 0, g_windowWidth, g_windowHeight);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	GR_SetScissorState(0);
+	GR_EnableDepth(0);
+	GR_SetBlendMode(BM_NONE);
+	GR_SetTexture(displayTexture, TF_32_BIT_RGBA);
+	GR_Ortho2D(0, displayW, displayH, 0, -1.0f, 1.0f);
+
+	for (int y = 0; y < displayH; y += maxChunkH)
+	{
+		const int chunkH = (displayH - y) > maxChunkH ? maxChunkH : displayH - y;
+
+		for (int x = 0; x < displayW; x += maxChunkW)
+		{
+			GrVertex verts[6];
+			const int chunkW = (displayW - x) > maxChunkW ? maxChunkW : displayW - x;
+
+			GR_BuildDisplayChunkRGBA(rgba, displayX + x, displayY + y, chunkW, chunkH);
+
+			glBindTexture(GL_TEXTURE_2D, displayTexture);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, chunkW, chunkH, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+
+			GR_SetOverrideTextureSize(maxChunkW, maxChunkH);
+			GR_FillDisplayChunkVerts(verts, x, y, chunkW, chunkH);
+			GR_UpdateVertexBuffer(verts, 6);
+			GR_DrawTriangles(0, 2);
+		}
+	}
 #endif
 }
 

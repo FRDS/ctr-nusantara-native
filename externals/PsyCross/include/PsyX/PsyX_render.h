@@ -175,6 +175,7 @@ extern void			GR_ReadVRAM(unsigned short* dst, int x, int y, int dst_w, int dst_
 
 extern void			GR_StoreFrameBuffer(int x, int y, int w, int h);
 extern void			GR_UpdateVRAM();
+extern void			GR_PresentVRAMDisplay();
 extern void			GR_ReadFramebufferDataToVRAM();
 
 extern TextureID	GR_CreateRGBATexture(int width, int height, u_char* data /*= nullptr*/);

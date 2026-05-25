@@ -624,7 +624,7 @@ void StateZero()
 
 #ifndef FastBoot
 	// Load Intro TIM for "SCEA Presents" from VRAM file
-	DECOMP_LOAD_VramFile(sdata->ptrBigfile1, 0x1fd);
+	DECOMP_LOAD_VramFile(sdata->ptrBigfile1, 0x1fd, NULL, &vramSize, -1);
 	DECOMP_MainInit_VRAMDisplay();
 #endif
 
@@ -655,7 +655,7 @@ void StateZero()
 
 	// This loads UI textures (shared.vrm)
 	// This includes traffic lights, font, and more
-	DECOMP_LOAD_VramFile(sdata->ptrBigfile1, 0x102);
+	DECOMP_LOAD_VramFile(sdata->ptrBigfile1, 0x102, NULL, &vramSize, -1);
 
 	sdata->mainGameState = 3;
 

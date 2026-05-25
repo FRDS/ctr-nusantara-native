@@ -43,10 +43,12 @@ int DECOMP_LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigH
 		// if first boot (SCEA + Copyright + ND Box)
 		if (sdata->boolFirstBoot != 0)
 		{
+			int vramSize;
+
 			sdata->boolFirstBoot = 0;
 
 			// Load Intro TIM for Copyright Page from VRAM file
-			DECOMP_LOAD_VramFile(bigfile, 0x1fe);
+			DECOMP_LOAD_VramFile(bigfile, 0x1fe, NULL, &vramSize, -1);
 			DECOMP_MainInit_VRAMDisplay();
 
 			gGT->db[0].drawEnv.isbg = 0;
