@@ -67,6 +67,10 @@
 
 #include "231_073_RB_Default_LInB.c"
 #include "231_074_077_RB_CtrLetter_ThCollide.c"
+#include "231_078_RB_Banner_Animate_Init.c"
+#include "231_079_RB_Banner_Animate_Play.c"
+#include "231_080_RB_Banner_ThTick.c"
+#include "231_081_RB_Banner_LInB.c"
 
 #include "231_082_085_RB_Armadillo.c"
 #include "231_086_088_RB_Fireball.c"
@@ -80,5 +84,6 @@
 #include "231_114_115_RB_Snowball.c"
 #include "231_116_119_RB_Spider.c"
 #include "231_120_RB_StartText_ProcessBucket.c"
+#include "231_121_RB_StartText_LInB.c"
 #include "231_122_126_RB_Teeth.c"
 #include "231_127_129_RB_Turtle.c"

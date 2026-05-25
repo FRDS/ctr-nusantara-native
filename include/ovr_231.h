@@ -339,8 +339,8 @@ struct CtrLetter
 
 struct StartBanner
 {
-	s16 unk0;
-	s16 unk1;
+	s16 unused;
+	s16 numVertices;
 	// 0x4 bytes large
 };
 

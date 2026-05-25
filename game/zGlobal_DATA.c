@@ -26,6 +26,7 @@ void RB_Orca_LInB();
 // void RB_Turtle_LInC();		-- DONE
 // void RB_Spider_LInB();		-- DONE
 // void RB_Fireball_LInB();	-- DONE
+void RB_StartText_LInB();
 void RB_Banner_LInB();
 void RB_CtrLetter_LInB();
 int RB_CtrLetter_LInC();
@@ -64,9 +65,8 @@ void AH_Sign_LInB();
 // void RB_Turtle_LInC() {}	-- DONE
 // void RB_Spider_LInB() {}	-- DONE
 // void RB_Fireball_LInB() {}	-- DONE
-void RB_Banner_LInB()
-{
-}
+// void RB_StartText_LInB() {} -- DONE
+// void RB_Banner_LInB() {} -- DONE
 // void RB_CtrLetter_LInB() {}	-- DONE
 // int RB_CtrLetter_LInC() {}	-- DONE
 // void RB_Crystal_LInB() {}	-- DONE
@@ -86,7 +86,7 @@ void AH_Sign_LInB()
 #endif
 
 // Missing from Decomp/General:
-// GenericMine, Banner, Sign, CS
+// GenericMine, Sign, CS
 
 // This inserts debug names if needed
 #if 1
@@ -1533,7 +1533,7 @@ struct Data
                     SET_MDM(NULL, RB_Teeth_LInB, RB_Teeth_LInC),
 
                     // 0x71 - STATIC_STARTTEXT
-                    SET_MDM(NULL, NULL /*RB_StartText_LInB*/, NULL),
+                    SET_MDM(NULL, RB_StartText_LInB, NULL),
 
                     // 0x72 - STATIC_SAVEOBJ
                     SET_MDM(NULL, AH_SaveObj_LInB, NULL),
