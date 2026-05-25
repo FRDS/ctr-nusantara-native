@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80039e98-0x80039fa8.
 void DECOMP_MainFreeze_IfPressStart(void)
 {
 	struct GameTracker *gGT = sdata->gGT;

@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80039a44-0x80039dcc.
 void DECOMP_MainFreeze_MenuPtrDefault(struct RectMenu *menu)
 {
 	int levID = 0; // dingo canyon
