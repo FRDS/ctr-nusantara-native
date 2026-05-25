@@ -187,165 +187,145 @@ void DECOMP_RB_CrateAny_ThTick_Grow(struct Thread *t)
 	}
 }
 
-struct Thread *RB_CrateAny_GrowInit(struct Instance *crateInst)
+typedef int (*CrateCollideFunc)(struct Thread *, struct Thread *, void *, struct ScratchpadStruct *);
+
+static struct Thread *RB_CrateAny_LInC_Birth(struct Instance *crateInst, void *funcThCollide, char *debugName)
 {
 	struct Thread *crateThread;
 	struct Crate *crateObj;
 
-	// birth regrow thread
 	crateThread = DECOMP_PROC_BirthWithObject(
 	    // creation flags
 	    SIZE_RELATIVE_POOL_BUCKET(sizeof(struct Crate), NONE, SMALL, STATIC),
 
 	    DECOMP_RB_CrateAny_ThTick_Grow, // behavior
-	    0,                              // debug name
+	    debugName,                      // debug name
 	    0                               // thread relative
 	);
 
 	if (crateThread == 0)
 		return 0;
+
 	crateInst->thread = crateThread;
 	crateThread->inst = crateInst;
+	crateThread->funcThCollide = funcThCollide;
 
 	crateObj = ((struct Crate *)crateThread->object);
-	crateObj->cooldown = 0x1e;
+	crateObj->cooldown = 0;
 	crateObj->boolPauseCooldown = 0;
 
 	return crateThread;
 }
 
-int DECOMP_RB_CrateWeapon_LInC(struct Instance *crateInst, struct Thread *collidingTh, struct ScratchpadStruct *sps)
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b3e7c-0x800b4278.
+int DECOMP_RB_CrateWeapon_ThCollide(struct Thread *crateThread, struct Thread *collidingTh, void *funcThCollide, struct ScratchpadStruct *sps)
 {
 	struct PushBuffer *pb;
 	s16 posScreen[2];
-	struct Thread *crateThread;
+	struct Instance *crateInst;
 	struct Crate *crateObj;
 	int hitModelID;
 	int hitModelID_cast;
 	struct Driver *driver;
 
-	crateThread = crateInst->thread;
+	crateInst = crateThread->inst;
+	crateObj = ((struct Crate *)crateThread->object);
 
-	// if no regrow thread exists,
-	// first frame of hitting a "full" crate
-	if (crateThread == 0)
+	if (crateObj->cooldown == 0)
 	{
-		RB_CrateAny_ExplodeInit(crateInst, 0xfafafa0);
-		crateThread = RB_CrateAny_GrowInit(crateInst);
-		if (crateThread == 0)
+		if ((crateInst->scale[0] != 0) && (crateInst->scale[0] != 0x1000))
 			return 0;
 
-		driver = RB_CrateAny_GetDriver(collidingTh, sps);
-		if ((int)driver == 1)
-			return 1;
+		crateObj->cooldown = 0x1e;
 
-		// if driver already has a weapon, quit
-		if ((driver->heldItemID != 0xf) && (driver->noItemTimer == 0))
+		if (crateInst->scale[0] == 0x1000)
 		{
-			return 1;
-		}
+			RB_CrateAny_ExplodeInit(crateInst, 0xfafafa0);
 
-		// held item count
-		if (driver->numHeldItems != 0)
-		{
-			return 1;
-		}
-
-		// if driver is firing weapon, quit
-		if ((driver->actionsFlagSet & 0x8000) != 0)
-		{
-			return 1;
-		}
-
-		// if driver has raincloud and weapon is shuffling, quit
-		if (driver->thCloud != 0)
-		{
-			if (((struct RainCloud *)driver->thCloud->object)->boolScrollItem == 1)
-			{
+			driver = RB_CrateAny_GetDriver(collidingTh, sps);
+			if ((int)driver == 1)
 				return 1;
-			}
-		}
 
-		// if driver is influenced by clock weapon, quit
-		if (driver->clockReceive != 0)
-		{
+			if ((driver->heldItemID != 0xf) && (driver->noItemTimer == 0))
+				return 1;
+
+			if (driver->numHeldItems != 0)
+				return 1;
+
+			if ((driver->actionsFlagSet & 0x8000) != 0)
+				return 1;
+
+			if (driver->thCloud != 0)
+			{
+				if (((struct RainCloud *)driver->thCloud->object)->boolScrollItem == 1)
+					return 1;
+			}
+
+			if (driver->clockReceive != 0)
+				return 1;
+
+			driver->heldItemID = 0x10;
+			driver->numTimesHitWeaponBox++;
+			driver->itemRollTimer = 90;
+
+			if ((sdata->gGT->gameMode1 & ROLLING_ITEM) == 0)
+			{
+				OtherFX_Play(0x5d, 0);
+				sdata->gGT->gameMode1 |= ROLLING_ITEM;
+			}
+
+			driver->PickupTimeboxHUD.cooldown = 5;
+			driver->noItemTimer = 0;
+
+			if (driver->numWumpas == 10)
+				driver->BattleHUD.juicedUpCooldown = 10;
+
+			pb = &sdata->gGT->pushBuffer[driver->driverID];
+			RB_Fruit_GetScreenCoords(pb, crateInst, &posScreen[0]);
+
+			driver->PickupTimeboxHUD.startX = pb->rect.x + posScreen[0];
+			driver->PickupTimeboxHUD.startY = pb->rect.y + posScreen[1];
+
 			return 1;
 		}
-
-		// == give driver weapon ==
-
-		// set weapon to roulette
-		driver->heldItemID = 0x10;
-
-		// incrememt
-		driver->numTimesHitWeaponBox++;
-
-		// timer for weapon roulette
-		driver->itemRollTimer = 90;
-
-		// if no roulette
-		if ((sdata->gGT->gameMode1 & ROLLING_ITEM) == 0)
-		{
-			// start loop
-			OtherFX_Play(0x5d, 0);
-
-			sdata->gGT->gameMode1 |= ROLLING_ITEM;
-		}
-
-		driver->PickupTimeboxHUD.cooldown = 5;
-		driver->noItemTimer = 0;
-
-		if (driver->numWumpas == 10)
-		{
-			driver->BattleHUD.juicedUpCooldown = 10;
-		}
-
-		pb = &sdata->gGT->pushBuffer[driver->driverID];
-		RB_Fruit_GetScreenCoords(pb, crateInst, &posScreen[0]);
-
-		// screenPosXY
-		driver->PickupTimeboxHUD.startX = pb->rect.x + posScreen[0];
-		driver->PickupTimeboxHUD.startY = pb->rect.y + posScreen[1];
-
-		// means thread was born?
-		return 1;
 	}
-
-	// do this again, or else crateObj locally
-	// is only initialized during thread birth
-	crateObj = ((struct Crate *)crateThread->object);
 
 	hitModelID = sps->Input1.modelID;
 	hitModelID_cast = hitModelID & 0x7fff;
 
-	// if crate hasn't grown back yet,
-	// and something collides with it
-	if (crateInst->scale[0] == 0)
-	{
-		// reset cooldown
-		crateObj->cooldown = 0x1e;
-	}
-
-	// determines if model already hit at least one crate?
-	// so hitting two crates with one weapon doesn't double-reward?
 	if ((hitModelID & 0x8000) == 0)
 		return 0;
 
-	// overwrite, remove bit
 	sps->Input1.modelID = hitModelID_cast;
-
-	// block if needed
 	RB_CrateAny_CheckBlockage(crateThread, hitModelID_cast, collidingTh);
-
-	// means no thread born?
 	return 0;
 }
 
-int DECOMP_RB_CrateFruit_LInC(struct Instance *crateInst, struct Thread *collidingTh, struct ScratchpadStruct *sps)
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b4278-0x800b432c.
+int DECOMP_RB_CrateWeapon_LInC(struct Instance *crateInst, struct Thread *collidingTh, struct ScratchpadStruct *sps)
+{
+	struct Thread *crateThread;
+
+	crateThread = crateInst->thread;
+	if (crateThread == NULL)
+	{
+		crateThread = RB_CrateAny_LInC_Birth(crateInst, (void *)DECOMP_RB_CrateWeapon_ThCollide, "crate");
+		if (crateThread == NULL)
+			return 0;
+	}
+
+	if (crateThread->funcThCollide == NULL)
+		return 0;
+
+	return ((CrateCollideFunc)crateThread->funcThCollide)(crateThread, collidingTh, crateThread->funcThCollide, sps);
+}
+
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b432c-0x800b471c.
+int DECOMP_RB_CrateFruit_ThCollide(struct Thread *crateThread, struct Thread *collidingTh, void *funcThCollide, struct ScratchpadStruct *sps)
 {
 	struct PushBuffer *pb;
 	s16 posScreen[2];
-	struct Thread *crateThread;
+	struct Instance *crateInst;
 	struct Crate *crateObj;
 	int hitModelID;
 	int hitModelID_cast;
@@ -353,127 +333,171 @@ int DECOMP_RB_CrateFruit_LInC(struct Instance *crateInst, struct Thread *collidi
 	int random;
 	int newWumpa;
 
-	crateThread = crateInst->thread;
+	crateInst = crateThread->inst;
+	crateObj = ((struct Crate *)crateThread->object);
 
-	// if no regrow thread exists,
-	// first frame of hitting a "full" crate
-	if (crateThread == NULL)
+	if (crateObj->cooldown == 0)
 	{
-		RB_CrateAny_ExplodeInit(crateInst, 0xf2953a0);
-		crateThread = RB_CrateAny_GrowInit(crateInst);
-		if (crateThread == 0)
+		if ((crateInst->scale[0] != 0) && (crateInst->scale[0] != 0x1000))
 			return 0;
 
-		driver = RB_CrateAny_GetDriver(collidingTh, sps);
-		if ((int)driver == 1)
-			return 1; // apparently `driver == 1` is intentional, take a look at the RB_CrateAny_GetDriver source. literally wtf is this.
+		crateObj->cooldown = 0x1e;
 
-		random = DECOMP_MixRNG_Scramble();
-		newWumpa = random;
-		if (random < 0)
+		if (crateInst->scale[0] == 0x1000)
 		{
-			newWumpa = random + 3;
+			RB_CrateAny_ExplodeInit(crateInst, 0xf2953a0);
+
+			driver = RB_CrateAny_GetDriver(collidingTh, sps);
+			if ((int)driver == 1)
+				return 1;
+
+			random = DECOMP_MixRNG_Scramble();
+			newWumpa = random;
+			if (random < 0)
+				newWumpa = random + 3;
+			newWumpa = random + (newWumpa >> 2) * -4 + 5;
+
+			driver->PickupWumpaHUD.cooldown = 5;
+			driver->PickupWumpaHUD.numCollected = newWumpa;
+
+			pb = &sdata->gGT->pushBuffer[driver->driverID];
+			RB_Fruit_GetScreenCoords(pb, driver->instSelf, &posScreen[0]);
+
+			driver->PickupWumpaHUD.startX = pb->rect.x + posScreen[0];
+			driver->PickupWumpaHUD.startY = pb->rect.y + posScreen[1] - 0x14;
+
+			return 1;
 		}
-		newWumpa = random + (newWumpa >> 2) * -4 + 5;
-
-		driver->PickupWumpaHUD.cooldown = 5;
-		driver->PickupWumpaHUD.numCollected = newWumpa;
-
-		pb = &sdata->gGT->pushBuffer[driver->driverID];
-		RB_Fruit_GetScreenCoords(pb, driver->instSelf, &posScreen[0]);
-
-		// screenPosXY
-		driver->PickupWumpaHUD.startX = pb->rect.x + posScreen[0];
-		driver->PickupWumpaHUD.startY = pb->rect.y + posScreen[1] - 0x14;
-
-		// means thread was born?
-		return 1;
 	}
-
-	// do this again, or else crateObj locally
-	// is only initialized during thread birth
-	crateObj = ((struct Crate *)crateThread->object);
 
 	hitModelID = sps->Input1.modelID;
 	hitModelID_cast = hitModelID & 0x7fff;
 
-	// if crate hasn't grown back yet,
-	// and something collides with it
-	if (crateInst->scale[0] == 0)
-	{
-		// reset cooldown
-		crateObj->cooldown = 0x1e;
-	}
-
-	// determines if model already hit at least one crate?
-	// so hitting two crates with one weapon doesn't double-reward?
 	if ((hitModelID & 0x8000) == 0)
 		return 0;
 
-	// overwrite, remove bit
 	sps->Input1.modelID = hitModelID_cast;
-
-	// block if needed
 	RB_CrateAny_CheckBlockage(crateThread, hitModelID_cast, collidingTh);
-
-	// means no thread born?
 	return 0;
 }
 
-// return's changed to return 0 as per https://discord.com/channels/527135227546435584/637616020177289236/1312155337545093130
-int DECOMP_RB_CrateTime_LInC(struct Instance *crateInst, struct Thread *driverTh, struct ScratchpadStruct *sps)
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b471c-0x800b47d0.
+int DECOMP_RB_CrateFruit_LInC(struct Instance *crateInst, struct Thread *collidingTh, struct ScratchpadStruct *sps)
+{
+	struct Thread *crateThread;
+
+	crateThread = crateInst->thread;
+	if (crateThread == NULL)
+	{
+		crateThread = RB_CrateAny_LInC_Birth(crateInst, (void *)DECOMP_RB_CrateFruit_ThCollide, "fruit_crate");
+		if (crateThread == NULL)
+			return 0;
+	}
+
+	if (crateThread->funcThCollide == NULL)
+		return 0;
+
+	return ((CrateCollideFunc)crateThread->funcThCollide)(crateThread, collidingTh, crateThread->funcThCollide, sps);
+}
+
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b47d0-0x800b4ba8.
+int DECOMP_RB_CrateTime_ThCollide(struct Thread *crateThread, struct Thread *driverTh, void *funcThCollide, struct ScratchpadStruct *sps)
 {
 	struct PushBuffer *pb;
 	s16 posScreen[2];
+	struct Instance *crateInst;
+	struct Crate *crateObj;
 	struct Driver *driver;
-
 	int modelID;
+	int hitModelID;
+	int hitModelID_cast;
 	struct GameTracker *gGT;
 
-	// if box is broken, quit
-	if (crateInst->scale[0] == 0)
+	crateInst = crateThread->inst;
+	crateObj = ((struct Crate *)crateThread->object);
+
+	if (crateObj->cooldown == 0)
+	{
+		if ((crateInst->scale[0] != 0) && (crateInst->scale[0] != 0x1000))
+			return 0;
+
+		crateObj->cooldown = 0x1e;
+
+		if (crateInst->scale[0] == 0x1000)
+		{
+			RB_CrateAny_ExplodeInit(crateInst, 0x80ff000);
+
+			gGT = sdata->gGT;
+			driver = RB_CrateAny_GetDriver(driverTh, sps);
+			if ((int)driver == 1)
+				return 1;
+
+			modelID = crateInst->model->id;
+
+			if ((driver->actionsFlagSet & 0x100000) != 0)
+				return 1;
+
+			driver->numTimeCrates++;
+
+			if (modelID == STATIC_TIME_CRATE_01)
+			{
+				gGT->frozenTimeRemaining += 0x3C0;
+				gGT->timeCrateTypeSmashed = 1;
+			}
+
+			else if (modelID == STATIC_TIME_CRATE_02)
+			{
+				gGT->frozenTimeRemaining += 0x780;
+				gGT->timeCrateTypeSmashed = 2;
+			}
+
+			else
+			{
+				gGT->frozenTimeRemaining += 0xb40;
+				gGT->timeCrateTypeSmashed = 3;
+
+				Voiceline_RequestPlay(0x13, data.characterIDs[driver->driverID], 0x10);
+			}
+
+			driver->PickupTimeboxHUD.cooldown = 10;
+
+			pb = &gGT->pushBuffer[driver->driverID];
+			RB_Fruit_GetScreenCoords(pb, crateInst, &posScreen[0]);
+
+			driver->PickupTimeboxHUD.startX = pb->rect.x + posScreen[0];
+			driver->PickupTimeboxHUD.startY = pb->rect.y + posScreen[1];
+
+			crateObj->boolPauseCooldown = 1;
+			return 1;
+		}
+	}
+
+	hitModelID = sps->Input1.modelID;
+	hitModelID_cast = hitModelID & 0x7fff;
+
+	if ((hitModelID & 0x8000) == 0)
 		return 0;
 
-	// == first frame of break ==
+	sps->Input1.modelID = hitModelID_cast;
+	RB_CrateAny_CheckBlockage(crateThread, hitModelID_cast, driverTh);
+	return 0;
+}
 
-	RB_CrateAny_ExplodeInit(crateInst, 0x80ff000);
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b4ba8-0x800b4c5c.
+int DECOMP_RB_CrateTime_LInC(struct Instance *crateInst, struct Thread *driverTh, struct ScratchpadStruct *sps)
+{
+	struct Thread *crateThread;
 
-	gGT = sdata->gGT;
-	driver = driverTh->object;
-	modelID = crateInst->model->id;
+	crateThread = crateInst->thread;
+	if (crateThread == NULL)
+	{
+		crateThread = RB_CrateAny_LInC_Birth(crateInst, (void *)DECOMP_RB_CrateTime_ThCollide, "fruit_crate");
+		if (crateThread == NULL)
+			return 0;
+	}
 
-	// if driver turned into AI during end-of-race menu
-	if ((driver->actionsFlagSet & 0x100000) != 0)
+	if (crateThread->funcThCollide == NULL)
 		return 0;
 
-	driver->numTimeCrates++;
-
-	if (modelID == STATIC_TIME_CRATE_01)
-	{
-		gGT->frozenTimeRemaining += 0x3C0;
-		gGT->timeCrateTypeSmashed = 1;
-	}
-
-	else if (modelID == STATIC_TIME_CRATE_02)
-	{
-		gGT->frozenTimeRemaining += 0x780;
-		gGT->timeCrateTypeSmashed = 2;
-	}
-
-	else
-	{
-		gGT->frozenTimeRemaining += 0xb40;
-		gGT->timeCrateTypeSmashed = 3;
-
-		Voiceline_RequestPlay(0x13, data.characterIDs[driver->driverID], 0x10);
-	}
-
-	driver->PickupTimeboxHUD.cooldown = 10;
-
-	pb = &gGT->pushBuffer[driver->driverID];
-	RB_Fruit_GetScreenCoords(pb, crateInst, &posScreen[0]);
-
-	// screenPosXY
-	driver->PickupTimeboxHUD.startX = pb->rect.x + posScreen[0];
-	driver->PickupTimeboxHUD.startY = pb->rect.y + posScreen[1];
+	return ((CrateCollideFunc)crateThread->funcThCollide)(crateThread, driverTh, crateThread->funcThCollide, sps);
 }
