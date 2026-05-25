@@ -6,9 +6,13 @@ void Seal_CheckColl(struct Instance *sealInst, struct Thread *sealTh, int damage
 
 void DECOMP_RB_Armadillo_ThTick_Rolling(struct Thread *t);
 
-int DECOMP_RB_Armadillo_ThCollide(struct Thread *thread)
+int DECOMP_RB_Armadillo_ThCollide(struct Thread *armadilloThread, struct Thread *driverTh, void *funcThCollide, struct ScratchpadStruct *sps)
 {
-	return thread->modelIndex == DYNAMIC_PLAYER;
+	(void)armadilloThread;
+	(void)driverTh;
+	(void)funcThCollide;
+
+	return (s16)sps->Input1.modelID == DYNAMIC_PLAYER;
 }
 
 void DECOMP_RB_Armadillo_ThTick_TurnAround(struct Thread *t)
@@ -157,7 +161,6 @@ void DECOMP_RB_Armadillo_LInB(struct Instance *inst)
 	t->funcThCollide = (void (*)(struct Thread *))DECOMP_RB_Armadillo_ThCollide;
 
 	// rolling animation
-	inst->animFrame = 0;
 	inst->animIndex = 1;
 
 	armObj = ((struct Armadillo *)t->object);
