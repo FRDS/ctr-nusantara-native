@@ -36,7 +36,7 @@ void RB_RainCloud_FadeAway(struct Thread *t)
 
 	if (inst->scale[0] < 0)
 	{
-		DECOMP_JitPool_Remove(&sdata->gGT->JitPools.rain, (struct Item *)rainLocal);
+		JitPool_Remove(&sdata->gGT->JitPools.rain, (struct Item *)rainLocal);
 
 		// This thread is now dead
 		t->flags |= 0x800;

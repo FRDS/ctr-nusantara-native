@@ -67,7 +67,7 @@ void DECOMP_MainInit_JitPoolsNew(struct GameTracker *gGT)
 	int numThread = uVar9 * 3 >> 7;
 
 	// ThreadPool
-	DECOMP_JitPool_Init(&gGT->JitPools.thread, numThread, sizeof(struct Thread), /*"ThreadPool"*/ 0);
+	JitPool_Init(&gGT->JitPools.thread, numThread, sizeof(struct Thread), /*"ThreadPool"*/ 0);
 
 #ifdef CTR_INTERNAL
 	fprintf(stderr, "  thread:       %3d items x 0x%X bytes\n", numThread, (u32)sizeof(struct Thread));
@@ -80,7 +80,7 @@ void DECOMP_MainInit_JitPoolsNew(struct GameTracker *gGT)
 	// MediumStackPool
 	// ASM: li a2, 136 (0x88) at 0x8003b544
 	// FIX: was sizeof(Item)+sizeof(WarpPad)=104, ASM uses 136 (+32/item)
-	DECOMP_JitPool_Init(&gGT->JitPools.mediumStack, numMedium, 136, 0);
+	JitPool_Init(&gGT->JitPools.mediumStack, numMedium, 136, 0);
 
 #ifdef CTR_INTERNAL
 	fprintf(stderr, "  mediumStack:  %3d items x 0x%X bytes\n", numMedium, 136);
@@ -93,7 +93,7 @@ void DECOMP_MainInit_JitPoolsNew(struct GameTracker *gGT)
 	// SmallStackPool
 	// ASM: li a2, 72 (0x48) at 0x8003b52c
 	// FIX: was sizeof(Item)+sizeof(UiElement3D)=64, ASM uses 72 (+8/item)
-	DECOMP_JitPool_Init(&gGT->JitPools.smallStack, numSmall, 72, 0);
+	JitPool_Init(&gGT->JitPools.smallStack, numSmall, 72, 0);
 
 #ifdef CTR_INTERNAL
 	fprintf(stderr, "  smallStack:   %3d items x 0x%X bytes\n", numSmall, 72);
@@ -133,8 +133,8 @@ void DECOMP_MainInit_JitPoolsNew(struct GameTracker *gGT)
 	}
 
 	// InstancePool
-	DECOMP_JitPool_Init(&gGT->JitPools.instance, numInstance, sizeof(struct Instance) + (sizeof(struct InstDrawPerPlayer) * numPlyr),
-	                    /*"InstancePool"*/ 0);
+	JitPool_Init(&gGT->JitPools.instance, numInstance, sizeof(struct Instance) + (sizeof(struct InstDrawPerPlayer) * numPlyr),
+	             /*"InstancePool"*/ 0);
 
 #ifdef CTR_INTERNAL
 	fprintf(stderr, "  instance:     %3d items x 0x%X bytes\n", numInstance, (u32)(sizeof(struct Instance) + (sizeof(struct InstDrawPerPlayer) * numPlyr)));
@@ -153,15 +153,15 @@ void DECOMP_MainInit_JitPoolsNew(struct GameTracker *gGT)
 
 	// ASM: li a2, 1648 (0x670) at 0x8003b574
 	// FIX: was sizeof(Item)+sizeof(Driver)=1600, ASM uses 1648 (+48/item)
-	DECOMP_JitPool_Init(&gGT->JitPools.largeStack, numDriver, 1648, 0);
-	DECOMP_JitPool_Init(&gGT->JitPools.rain, numDriver, sizeof(struct RainLocal), /*"RainPool"*/ 0);
+	JitPool_Init(&gGT->JitPools.largeStack, numDriver, 1648, 0);
+	JitPool_Init(&gGT->JitPools.rain, numDriver, sizeof(struct RainLocal), /*"RainPool"*/ 0);
 
 
 	// FIX(aalhendi): removed numParticle > 120 cap, not in SCUS ASM
 	int numParticle = uVar7 >> 5;
 
-	DECOMP_JitPool_Init(&gGT->JitPools.particle, numParticle, sizeof(struct Particle), /*"ParticlePool"*/ 0);
-	DECOMP_JitPool_Init(&gGT->JitPools.oscillator, numParticle, 0x18, /*"OscillatorPool"*/ 0);
+	JitPool_Init(&gGT->JitPools.particle, numParticle, sizeof(struct Particle), /*"ParticlePool"*/ 0);
+	JitPool_Init(&gGT->JitPools.oscillator, numParticle, 0x18, /*"OscillatorPool"*/ 0);
 
 
 #ifdef REBUILD_PS1

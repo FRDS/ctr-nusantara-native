@@ -1,6 +1,6 @@
 #include <common.h>
 
-int DECOMP_JitPool_Add(struct JitPool *AP)
+int JitPool_Add(struct JitPool *AP)
 {
 	struct Item *item;
 	item = AP->free.first;

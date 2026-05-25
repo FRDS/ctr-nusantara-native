@@ -2,7 +2,7 @@
 
 struct Instance *DECOMP_INSTANCE_Birth3D(struct Model *model, char *name, struct Thread *th)
 {
-	struct Instance *inst = (struct Instance *)DECOMP_JitPool_Add(&sdata->gGT->JitPools.instance);
+	struct Instance *inst = (struct Instance *)JitPool_Add(&sdata->gGT->JitPools.instance);
 
 	if (inst != 0)
 	{

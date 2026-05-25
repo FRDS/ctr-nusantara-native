@@ -1,6 +1,6 @@
 #include <common.h>
 
-void DECOMP_JitPool_Clear(struct JitPool *AP)
+void JitPool_Clear(struct JitPool *AP)
 {
 	int loopIndex;
 	u32 currSlot;

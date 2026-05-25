@@ -258,10 +258,10 @@ u16 DECOMP_INSTANCE_GetNumAnimFrames(struct Instance *pInstance, int animIndex);
 void DECOMP_INSTANCE_LevInitAll(struct InstDef *levInstDef, int numInst);
 
 // JitPool
-int DECOMP_JitPool_Add(struct JitPool *AP);
-void DECOMP_JitPool_Clear(struct JitPool *AP);
-void DECOMP_JitPool_Init(struct JitPool *AP, int maxItems, int itemSize, char *name);
-void DECOMP_JitPool_Remove(struct JitPool *AP, struct Item *item);
+int JitPool_Add(struct JitPool *AP);
+void JitPool_Clear(struct JitPool *AP);
+void JitPool_Init(struct JitPool *AP, int maxItems, int itemSize, char *name);
+void JitPool_Remove(struct JitPool *AP, struct Item *item);
 
 // LevInstDef
 void DECOMP_LevInstDef_UnPack(struct mesh_info *ptr_mesh_info);

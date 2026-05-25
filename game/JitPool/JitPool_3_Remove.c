@@ -1,6 +1,6 @@
 #include <common.h>
 
-void DECOMP_JitPool_Remove(struct JitPool *AP, struct Item *item)
+void JitPool_Remove(struct JitPool *AP, struct Item *item)
 {
 #ifdef CTR_INTERNAL
 	if (AP->taken.count == 0 || AP->taken.first == 0)

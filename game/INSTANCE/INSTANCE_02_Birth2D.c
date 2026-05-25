@@ -25,7 +25,7 @@ struct Instance *DECOMP_INSTANCE_Birth2D(struct Model *model, char *name, struct
 
 	// attempt at 1-1 ghidra (but the above impl is probably correct)
 	// struct GameTracker* gGT = sdata->gGT;
-	// struct Instance* inst = (struct Instance*)DECOMP_JitPool_Add(gGT->JitPools.instance);
+	// struct Instance* inst = (struct Instance*)JitPool_Add(gGT->JitPools.instance);
 	// if (inst != NULL)
 	//{
 	//	DECOMP_INSTANCE_Birth(inst, model, name, th, 0x40f);
