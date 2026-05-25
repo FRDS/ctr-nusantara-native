@@ -7,7 +7,7 @@ void VehPhysProc_SlamWall_Animate();
 
 void *PlayerCrashingFuncTable[13] = {
     0,
-    0,
+    DECOMP_VehPhysProc_SlamWall_Update,
     DECOMP_VehPhysProc_SlamWall_PhysLinear,
     DECOMP_VehPhysProc_Driving_Audio,
     DECOMP_VehPhysProc_SlamWall_PhysAngular,
@@ -37,6 +37,7 @@ void *PlayerCrashingFuncTable[13] = {
 #endif
 };
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80063bd4-0x80063cf4.
 void DECOMP_VehPhysProc_SlamWall_Init(struct Thread *t, struct Driver *d)
 {
 	int i;
@@ -49,7 +50,7 @@ void DECOMP_VehPhysProc_SlamWall_Init(struct Thread *t, struct Driver *d)
 
 	d->kartState = KS_CRASHING;
 
-	d->numFramesSpentSteering = 1000;
+	d->numFramesSpentSteering = 10000;
 
 	d->Screen_OffsetY = 0;
 	d->ampTurnState = 0;
