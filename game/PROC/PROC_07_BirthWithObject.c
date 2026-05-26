@@ -1,6 +1,6 @@
 #include <common.h>
 
-// ASM: 8004205c-80042288
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8004205c-0x8004228c.
 struct Thread *PROC_BirthWithObject(int flags, void *funcThTick, char *name, struct Thread *relativeTh)
 {
 	int bucketID;

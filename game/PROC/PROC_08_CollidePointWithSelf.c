@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8004228c-0x80042348.
 void PROC_CollidePointWithSelf(struct Thread *th, struct BucketSearchParams *buf)
 {
 	struct Instance *inst;

@@ -2,6 +2,7 @@
 
 // search starts with driver thread's child
 // searches for turbo model
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80042394-0x800423fc.
 struct Thread *PROC_SearchForModel(struct Thread *th, s16 modelID)
 {
 	while (th != 0)
