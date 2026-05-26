@@ -1,73 +1,48 @@
 #include <common.h>
 
-// instance, ptr rot[6], cop registers
-void Vector_SpecLightSpin2D(int param_1, undefined4 param_2, SVECTOR *param_3)
+static void Vector_SpecLightSpin2D_RotMatrixMul(MATRIX *matrix, const SVec3 *input, VECTOR *mac, SVec3 *output)
 {
-	// TODO:
+	gte_SetRotMatrix(matrix);
+	gte_ldv0((SVECTOR *)input);
+	gte_rtv0();
+	gte_stlvnl(mac);
 
-	// this file was created so that git would touch this directory.
+	output->x = (s16)mac->vx;
+	output->y = (s16)mac->vy;
+	output->z = (s16)mac->vz;
+}
 
-	// undefined* puVar1;
-	// int iVar2;
-	// undefined4 uVar3;
-	// undefined* puVar4;
-	// undefined auStack104[16];
-	// undefined auStack88[72];
+void Vector_SpecLightSpin2D(struct Instance *inst, s16 *rot, s16 *lightDir)
+{
+	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800572d0-0x8005741c.
+	MATRIX rotMatrix;
+	VECTOR lightMac;
+	VECTOR viewMac;
+	SVec3 light = {.x = lightDir[0], .y = lightDir[1], .z = lightDir[2]};
+	SVec3 lightLocal;
+	SVec3 view = {.x = 0, .y = 0, .z = 0x1000};
+	SVec3 viewLocal;
+	SVec3 halfVector;
+	struct GameTracker *gGT = sdata->gGT;
+	struct InstDrawPerPlayer *idpp = INST_GETIDPP(inst);
 
-	// puVar4 = auStack104;
+	ConvertRotToMatrix_Transpose(&rotMatrix, rot);
+	Vector_SpecLightSpin2D_RotMatrixMul(&rotMatrix, &light, &lightMac, &lightLocal);
 
-	//// ConvertRotToMatrix_Transpose
-	// FUN_8006c378(auStack88, param_2);
+	inst->unk53 = (char)lightMac.vx;
+	inst->reflectionRGBA = (u32)lightMac.vz;
 
-	// gte_ldv0(param_3);
-	// gte_rtv0();
-	// uVar3 = gte_stMAC1();
-	//*(undefined4*)(puVar4 + 0x30) = uVar3;
-	// uVar3 = gte_stMAC2();
-	//*(undefined4*)(puVar4 + 0x34) = uVar3;
-	// uVar3 = gte_stMAC3();
-	//*(undefined4*)(puVar4 + 0x38) = uVar3;
-	//*(undefined*)(param_1 + 0x53) = puVar4[0x30];
-	//*(undefined4*)(param_1 + 0x58) = *(undefined4*)(puVar4 + 0x38);
-	//*(undefined2*)(puVar4 + 0x50) = 0;
-	//*(undefined2*)(puVar4 + 0x52) = 0;
-	//*(undefined2*)(puVar4 + 0x54) = 0x1000;
-	// gte_ldv0((SVECTOR*)(puVar4 + 0x50));
-	// gte_rtv0();
-	// uVar3 = gte_stMAC1();
-	//*(undefined4*)(puVar4 + 0x40) = uVar3;
-	// uVar3 = gte_stMAC2();
-	//*(undefined4*)(puVar4 + 0x44) = uVar3;
-	// uVar3 = gte_stMAC3();
-	//*(undefined4*)(puVar4 + 0x48) = uVar3;
-	//*(s16*)(puVar4 + 0x50) = *(s16*)(puVar4 + 0x30) + *(s16*)(puVar4 + 0x40);
-	//*(s16*)(puVar4 + 0x52) = *(s16*)(puVar4 + 0x34) + *(s16*)(puVar4 + 0x44);
-	//*(s16*)(puVar4 + 0x54) = *(s16*)(puVar4 + 0x38) + *(s16*)(puVar4 + 0x48);
+	Vector_SpecLightSpin2D_RotMatrixMul(&rotMatrix, &view, &viewMac, &viewLocal);
 
-	//// MATH_VectorNormalize
-	// FUN_8003d378();
+	halfVector.x = lightLocal.x + viewLocal.x;
+	halfVector.y = lightLocal.y + viewLocal.y;
+	halfVector.z = lightLocal.z + viewLocal.z;
+	MATH_VectorNormalize(&halfVector);
 
-	// puVar1 = PTR_DAT_8008d2ac;
-	// iVar2 = 0;
-
-	//// if numPlyrCurrGame != 0
-	// if (PTR_DAT_8008d2ac[0x1ca8] != '\0')
-	//{
-	//	// each InstDrawPerPlayer
-	//	// for iVar2 = 0; iVar2 < numPlyrCurrGame; iVar2++
-	//	do
-	//	{
-	//		// write specular values,
-	//		// increment loop index
-	//		*(undefined2*)(param_1 + 0xf4) = *(undefined2*)(puVar4 + 0x50);
-	//		*(undefined2*)(param_1 + 0xf6) = *(undefined2*)(puVar4 + 0x52);
-	//		iVar2 = iVar2 + 1;
-	//		*(undefined2*)(param_1 + 0xf8) = *(undefined2*)(puVar4 + 0x54);
-
-	//		// next InstDrawPerPlayer
-	//		param_1 = param_1 + 0x88;
-
-	//	} while (iVar2 < (int)(uint)(byte)puVar1[0x1ca8]);
-	//}
-	// return;
+	for (int i = 0; i < gGT->numPlyrCurrGame; i++)
+	{
+		idpp[i].specLight[0] = halfVector.x;
+		idpp[i].specLight[1] = halfVector.y;
+		idpp[i].specLight[2] = halfVector.z;
+	}
 }

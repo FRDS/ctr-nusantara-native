@@ -22,19 +22,14 @@ void UI_ThTick_Reward(struct Thread *bucket)
 	// Spin on the Y axis
 	obj->rot[1] += 0x40;
 
-#ifndef REBUILD_PS1
 	Vector_SpecLightSpin2D(inst, (s16 *)obj->rot, (s16 *)obj->lightDir);
-#endif
 
 	// pointer to matrix
 	mat = &inst->matrix;
 
-	// converted to TEST in rebuildPS1
 	ConvertRotToMatrix(mat, (s16 *)obj->rot);
 
-#ifndef REBUILD_PS1
 	MatrixRotate(mat, &obj->m, mat);
-#endif
 
 	if (
 	    // if hud is enabled, and this is not demo mode

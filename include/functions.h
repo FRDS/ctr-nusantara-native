@@ -1283,7 +1283,7 @@ void Vector_SpecLightSpin3D(struct Instance *, s16 *, s16 *);
 void Vector_SpecLightNoSpin3D(struct Instance *, s16 *, s16 *);
 void CS_Podium_Prize_Spin(struct Instance *inst, s16 *prize);
 int howl_VolumeGet(int type);
-void Vector_SpecLightSpin2D(struct Instance *, s16 *, s16 *); // guessed about the signature
+void Vector_SpecLightSpin2D(struct Instance *, s16 *, s16 *);
 char *CS_Credits_GetNextString(char *);
 void CS_Credits_DestroyCreditGhost();
 void CdSetDebug(int);

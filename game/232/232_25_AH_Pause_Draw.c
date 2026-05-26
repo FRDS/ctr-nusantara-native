@@ -402,9 +402,7 @@ void AH_Pause_Draw(int pageID, int posX)
 		{
 			s16 *specArr = &D232.advPauseInst[index].specLight[0];
 
-#ifndef REBUILD_PS1
 			Vector_SpecLightSpin2D(inst, rotArr, specArr);
-#endif
 		}
 
 		else

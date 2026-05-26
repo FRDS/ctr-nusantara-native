@@ -22,9 +22,7 @@ void UI_ThTick_CtrLetters(struct Thread *bucket)
 	// Rotate on the Y axis
 	obj->rot[1] += 0x40;
 
-#ifndef REBUILD_PS1
 	Vector_SpecLightSpin2D(inst, (s16 *)obj->rot, (s16 *)obj->lightDir);
-#endif
 
 	if (
 	    // If you're in End-Of-Race menu
@@ -55,12 +53,9 @@ void UI_ThTick_CtrLetters(struct Thread *bucket)
 	rot[0] = 0;
 	rot[2] = 0;
 
-	// converted to TEST in rebuildPS1
 	ConvertRotToMatrix(&inst->matrix, &rot[0]);
 
-#ifndef REBUILD_PS1
 	MatrixRotate(&inst->matrix, &obj->m, &inst->matrix);
-#endif
 
 	return;
 }
