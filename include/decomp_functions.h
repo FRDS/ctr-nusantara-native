@@ -364,7 +364,7 @@ void MATH_MatrixMul(MATRIX *output, MATRIX *input, VECTOR *rotate);
 void MEMCARD_InitCard(void);
 void MEMCARD_SetIcon(int iconID);
 u32 MEMCARD_CRC16(u32 crc, int nextByte);
-int MEMCARD_ChecksumSave(u8 *saveBytes, int len);
+void MEMCARD_ChecksumSave(u8 *saveBytes, int len);
 int MEMCARD_ChecksumLoad(u8 *saveBytes, int len);
 char *MEMCARD_StringInit(int slotIndex, char *dstString);
 void MEMCARD_StringSet(char *dstString, int slotIdx, char *srcString);

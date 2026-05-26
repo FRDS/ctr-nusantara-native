@@ -7,7 +7,6 @@ u8 MEMCARD_Save(int slotIdx, char *name, char *param_3, u8 *ptrMemcard, int memc
 	char path[0x40];
 	char *nameNoDevice;
 	FILE *file;
-	int crcResult;
 	size_t wroteIcon;
 	size_t wroteData;
 
@@ -21,13 +20,7 @@ u8 MEMCARD_Save(int slotIdx, char *name, char *param_3, u8 *ptrMemcard, int memc
 
 	sdata->crc16_checkpoint_byteIndex = 0;
 	sdata->crc16_checkpoint_status = 0;
-	do
-	{
-		crcResult = MEMCARD_ChecksumSave(ptrMemcard, memcardFileSize);
-	} while (crcResult == MC_RETURN_PENDING);
-
-	if (crcResult != MC_RETURN_IOE)
-		return MC_RETURN_TIMEOUT;
+	MEMCARD_ChecksumSave(ptrMemcard, memcardFileSize);
 
 	snprintf(path, sizeof(path), "%s", nameNoDevice);
 
@@ -49,6 +42,7 @@ u8 MEMCARD_Save(int slotIdx, char *name, char *param_3, u8 *ptrMemcard, int memc
 
 	MEMCARD_NewTask(slotIdx, name, ptrMemcard, memcardFileSize, 0);
 
+	MEMCARD_ChecksumSave(ptrMemcard, memcardFileSize);
 
 	int numBlock = 1;
 	if (memcardFileSize == 0x3E00)
@@ -85,8 +79,6 @@ u8 MEMCARD_Save(int slotIdx, char *name, char *param_3, u8 *ptrMemcard, int memc
 	else
 	{
 		sdata->memcardIconSize = 0x100;
-		sdata->crc16_checkpoint_byteIndex = 0;
-		sdata->crc16_checkpoint_status = 0;
 		sdata->memcard_stage = MC_STAGE_SAVE_PART0_START;
 		return MC_RETURN_PENDING;
 	}

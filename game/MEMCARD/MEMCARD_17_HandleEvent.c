@@ -160,12 +160,6 @@ int MEMCARD_HandleEvent(void)
 
 	case MC_STAGE_SAVE_PART0_START:
 
-		int MEMCARD_ChecksumSave(u8 * saveBytes, int len);
-		event = MEMCARD_ChecksumSave(sdata->memcard_ptrStart, sdata->memcardFileSize);
-
-		if (event == MC_RETURN_PENDING)
-			return MC_RETURN_PENDING;
-
 		sdata->memcard_stage++;
 		extra = MC_EXTRA_WRITE_ICON;
 		break;
@@ -268,48 +262,4 @@ int MEMCARD_HandleEvent(void)
 		    // read pointer is assumed
 		    sdata->memcardIconSize, sdata->memcardFileSize);
 	};
-}
-
-int MEMCARD_NewFunc_AsyncCRC(u8 *saveBytes, int len)
-{
-	int i;
-	int crc;
-	int byteIndexEnd;
-	int byteIndexStart;
-	int boolFinishThisFrame = 1;
-
-	// Leave 2 bytes at the end,
-	// the checksum is stored there
-	len -= 2;
-	byteIndexEnd = len;
-
-	// Option 1: Set ZERO for first-frame of multi-frame load
-	// Option 2: Set existing checkpoint from previous frame
-	crc = sdata->crc16_checkpoint_status;
-	byteIndexStart = sdata->crc16_checkpoint_byteIndex;
-
-	// if more than 512 bytes remain
-	if (byteIndexEnd > (byteIndexStart + 0x200))
-	{
-		// cap to 512 bytes, and then continue next frame
-		byteIndexEnd = (byteIndexStart + 0x200);
-		boolFinishThisFrame = 0;
-	}
-
-	// run checksum
-	for (i = byteIndexStart; i < byteIndexEnd; i++)
-	{
-		crc = MEMCARD_CRC16(crc, saveBytes[i]);
-	}
-
-	// save checkpoints for next frame
-	sdata->crc16_checkpoint_status = crc;
-	sdata->crc16_checkpoint_byteIndex = byteIndexEnd;
-
-	if (boolFinishThisFrame == 0)
-	{
-		return MC_RETURN_PENDING;
-	}
-
-	return MC_RETURN_IOE;
 }
