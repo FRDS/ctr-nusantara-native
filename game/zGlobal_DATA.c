@@ -4974,7 +4974,7 @@ struct Data
                     .unk1 = 0,
                     .state = 0xC81,
                     .rows = &data.rowsGreenLoadSave[0],
-                    .funcPtr = (void (*)(struct RectMenu *))0x80048960,
+                    .funcPtr = SelectProfile_AdvPickMode_MenuProc,
                     .drawStyle = 0x10, // GREEN
                 },
 
@@ -5014,7 +5014,7 @@ struct Data
                 {
                     .stringIndexTitle = -1,
                     .state = 0x20,
-                    .funcPtr = (void (*)(struct RectMenu *))0x80047da8,
+                    .funcPtr = SelectProfile_QueueLoadHub_MenuProc,
                 },
 
             .MetaDataLoadSave =
