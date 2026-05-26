@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003147c-0x800314c0.
 void LibraryOfModels_Store(struct GameTracker *gGT, u32 numModels, struct Model **ptrModelArray)
 {
 	while (numModels != 0)
@@ -12,20 +13,4 @@ void LibraryOfModels_Store(struct GameTracker *gGT, u32 numModels, struct Model 
 		numModels--;
 		ptrModelArray++;
 	}
-
-
-	// struct Model* m;
-	//
-	//// if numModels is -1, then loop until nullptr,
-	//// that works by using u32
-	// while(numModels-- != 0)
-	//{
-	//	m = *ptrModelArray++;
-	//	if(m == 0) return;
-	//
-	//	// this is not unsigned,
-	//	// if id == -1, dont put it on list
-	//	if(m->id >= 0)
-	//		gGT->modelPtr[m->id] = m;
-	// }
 }

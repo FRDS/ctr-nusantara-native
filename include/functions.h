@@ -481,7 +481,7 @@ void LHMatrix_Parent(struct Instance *inst, struct Instance *driverInst, SVECTOR
 
 // LibraryOfModels
 
-void LibraryOfModels_Store(struct GameTracker *gGT, int param_2, struct Model **param_3);
+void LibraryOfModels_Store(struct GameTracker *gGT, u32 numModels, struct Model **ptrModelArray);
 void LibraryOfModels_Clear(struct GameTracker *gGT);
 
 // LinkedCollide
