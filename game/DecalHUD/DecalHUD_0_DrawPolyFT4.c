@@ -1,7 +1,6 @@
 #include <common.h>
 
-#define EDUCATIONAL_BUG_IF 0
-
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80022db0-0x80022ec4.
 void DecalHUD_DrawPolyFT4(struct Icon *icon, s16 posX, s16 posY, struct PrimMem *primMem, u_long *ot, char transparency, s16 scale)
 {
 	if (!icon)
@@ -15,15 +14,7 @@ void DecalHUD_DrawPolyFT4(struct Icon *icon, s16 posX, s16 posY, struct PrimMem 
 	u32 bottomY = posY + FP_Mult(height, scale);
 	u32 rightX = posX + FP_Mult(width, scale);
 
-#if EDUCATIONAL_BUG_IF
-	// using custom-made macro that resembles the compiler optimization used in the original code
-	// the X and Y fields of the primitive will be dereferenced as combined 32-bit integers for each vertex
-	// from this, the X and Y coordinates will be added onto these integers using bitwise OR
-	// this causes a bug where if X is higher than 0xFFFF (by not being cast as unsigned 16-bits) it will overflow onto Y
 	setXY4CompilerHack(p, posX, posY, rightX, posY, posX, bottomY, rightX, bottomY);
-#else
-	setXY4(p, posX, posY, rightX, posY, posX, bottomY, rightX, bottomY);
-#endif
 	setIconUV(p, icon);
 
 	// this function doesn't support coloring the primitives

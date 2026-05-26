@@ -1,15 +1,10 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80021c94-0x80021da0.
 void CTR_ErrorScreen(char r, char g, char b)
 {
 	TILE p;
 	int i;
-
-#ifdef REBUILD_PC
-	while (1)
-	{
-	}
-#endif
 
 	for (i = 0; i < 3; i++)
 	{
