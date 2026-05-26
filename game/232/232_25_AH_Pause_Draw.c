@@ -255,9 +255,7 @@ void AH_Pause_Draw(int pageID, int posX)
 
 			inst->matrix.t[1] = UI_ConvertY_2(instPosY + 0x41, 0x100);
 
-#ifndef REBUILD_PS1
 			SelectProfile_PrintInteger(ptrTokenCount[i], instPosX + 0x36, instPosY + 0x3a, 0, 0);
-#endif
 
 			int strX = 'X'; //"X\0\0" + nullterm
 			DecalFont_DrawLine((char *)&strX, instPosX + 0x24, instPosY + 0x3e, FONT_SMALL, 0);
@@ -300,9 +298,7 @@ void AH_Pause_Draw(int pageID, int posX)
 
 			inst->matrix.t[1] = UI_ConvertY_2(0x49, 0x100);
 
-#ifndef REBUILD_PS1
 			SelectProfile_PrintInteger(count[i], instPosX + 0x19, 0x49, 0, 0);
-#endif
 
 			int strX = 'X'; //"X\0\0" + nullterm
 			DecalFont_DrawLine((char *)&strX, instPosX + 10, 0x4e, FONT_SMALL, 0);
