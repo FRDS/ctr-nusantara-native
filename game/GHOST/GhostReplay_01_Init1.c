@@ -1,7 +1,5 @@
 #include <common.h>
 
-void GhostReplay_ThTick(struct Thread *);
-
 void GhostReplay_Init1(void)
 {
 	char i;
@@ -175,7 +173,7 @@ void GhostReplay_Init1(void)
 		memset(ghostDriver, 0, 0x638);
 		ghostDriver->ghostID = i;
 		ghostDriver->driverID = i + 1;
-		ghostDriver->ghostBoolInit = 1;
+		ghostDriver->ghostBoolInit = 0;
 		ghostDriver->ghostBoolStarted = 0;
 		ghostDriver->ghostTape = tape;
 		ghostDriver->instSelf = inst;
@@ -206,9 +204,7 @@ void GhostReplay_Init1(void)
 		// pointer to TrTire, for transparent tires
 		ghostDriver->wheelSprites = ICONGROUP_GETICONS(gGT->iconGroup[0xc]);
 
-		// advance ghost by one frame,
-		// just so Oxide doesn't block your view
-		GhostReplay_ThTick(t);
+		// NOTE(aalhendi): GhostReplay_Init2 owns retail activation/tick.
 	}
 
 	return;

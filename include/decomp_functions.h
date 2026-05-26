@@ -529,6 +529,7 @@ void UI_RaceEnd_MenuProc(struct RectMenu *);
 // VEH
 void VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY);
 void VehBirth_TeleportAll(struct GameTracker *gGT, u32 spawnFlags);
+struct Model *VehBirth_GetModelByName(char *searchName);
 void VehBirth_SetConsts(struct Driver *driver);
 void VehBirth_EngineAudio_AllPlayers(void);
 void VehBirth_TireSprites(struct Thread *t);

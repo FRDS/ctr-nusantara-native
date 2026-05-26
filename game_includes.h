@@ -616,6 +616,7 @@
 
 #include "game/Vehicle/VehBirth_0_TeleportSelf.c"
 #include "game/Vehicle/VehBirth_1_TeleportAll.c"
+#include "game/Vehicle/VehBirth_2_GetModelByName.c"
 #include "game/Vehicle/VehBirth_3_SetConsts.c"
 #include "game/Vehicle/VehBirth_4_EngineAudio_AllPlayers.c"
 #include "game/Vehicle/VehBirth_5_NullThread.c"

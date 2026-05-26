@@ -219,8 +219,9 @@ void GAMEPROG_GetPtrHighScoreTrack();
 
 // GhostBuffer
 
-// void GhostReplay_ThTick();
-// GhostReplay_Init1()
+void GhostReplay_ThTick(struct Thread *t);
+void GhostReplay_Init1(void);
+void GhostReplay_Init2(void);
 void GhostTape_Start(void);
 void GhostTape_End(void);
 void GhostTape_WriteMoves(s16 param_1);
@@ -947,7 +948,7 @@ struct Scrub *VehAfterColl_GetSurface(u32 scrubId);
 
 // VehBirth_TeleportSelf()
 void VehBirth_TeleportAll(struct GameTracker *gGT, u32 spawnFlags);
-// VehBirth_GetModelByName()
+struct Model *VehBirth_GetModelByName(char *searchName);
 void VehBirth_SetConsts(struct Driver *driver);
 // VehBirth_EngineAudio_AllPlayers()
 // VehBirth_TireSprites()
@@ -1264,7 +1265,6 @@ void RB_Player_KillPlayer(struct Driver *player_1, struct Driver *player_2);
 void RB_Fruit_GetScreenCoords(struct PushBuffer *pb, struct Instance *inst, s16 *output);
 void VehPhysForce_OnGravity(struct Driver *driver, Vec3 *velocity);
 int RngDeadCoed(u32 *);
-struct Model *VehBirth_GetModelByName(char *searchName);
 struct Terrain *VehAfterColl_GetTerrain(u8 terrainType);
 void UI_CupStandings_UpdateCupRanks();
 void UI_CupStandings_FinalizeCupRanks();

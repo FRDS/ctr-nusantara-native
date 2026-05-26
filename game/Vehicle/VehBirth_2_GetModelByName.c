@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80058948-0x80058a60.
 struct Model *VehBirth_GetModelByName(char *searchName)
 {
 	struct Model *m;
