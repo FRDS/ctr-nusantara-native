@@ -20,6 +20,7 @@ static char AH_Door_IsOpenByRewards(s16 levelID, s16 doorID)
 	return false;
 }
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 overlay 232 0x800afa60-0x800b072c.
 void AH_Door_ThTick(struct Thread *t)
 {
 	char doorIsOpen;
@@ -239,7 +240,7 @@ void AH_Door_ThTick(struct Thread *t)
 				if (door->keyInst[0] == NULL)
 				{
 					// if number of keys is more than zero
-					if (numKeys != 0)
+					if (numKeys > 0)
 					{
 						// spawn instances for every key you have,
 						// this makes them spin in a circle before
@@ -247,26 +248,17 @@ void AH_Door_ThTick(struct Thread *t)
 						for (i = 0; i < numKeys; i++)
 						{
 							// name = "key"
-							keyInst = INSTANCE_Birth3D(gGT->modelPtr[STATIC_KEY], 0, t);
+							keyInst = INSTANCE_Birth3D(gGT->modelPtr[STATIC_KEY], R232.s_key, t);
 
 							// Set Key Color
 							keyInst->colorRGBA = 0xdca6000;
 
 							// specular lighting
 							keyInst->flags |= 0x20000;
+							door->frameCount_unused++;
 
 							driverInst = driver->instSelf;
-
-							keyInst->matrix.m[0][0] = driverInst->matrix.m[0][0];
-							keyInst->matrix.m[0][2] = driverInst->matrix.m[0][2];
-							keyInst->matrix.m[1][0] = driverInst->matrix.m[1][0];
-							keyInst->matrix.m[2][0] = driverInst->matrix.m[2][0];
-							keyInst->matrix.m[2][2] = driverInst->matrix.m[2][2];
-
-							// copy position for key from driver
-							keyInst->matrix.t[0] = driverInst->matrix.t[0];
-							keyInst->matrix.t[1] = driverInst->matrix.t[1];
-							keyInst->matrix.t[2] = driverInst->matrix.t[2];
+							keyInst->matrix = driverInst->matrix;
 
 							// set scale to zero
 							keyInst->scale[0] = 0;
@@ -424,61 +416,58 @@ void AH_Door_ThTick(struct Thread *t)
 
 	// == door is opening ==
 
-	door->doorRot[1] += 0x10;
-
-	// right-hand door rot[x,y,z]
-	desiredRot[0] = door->doorRot[0];
-	desiredRot[1] = doorInst->instDef->rot[1] - door->doorRot[1];
-	desiredRot[2] = door->doorRot[2];
-
-	// converted to TEST in rebuildPS1
-	ConvertRotToMatrix(&door->otherDoor->matrix, &desiredRot[0]);
-
-	// left-hand door rot[x,y,z]
-	desiredRot[1] = doorInst->instDef->rot[1] + door->doorRot[1];
-
-	// converted to TEST in rebuildPS1
-	ConvertRotToMatrix(&doorInst->matrix, &desiredRot[0]);
-
-	// if less than 11 frames have passed,
-	// decrease key scale, then quit function
-	if (door->keyShrinkFrame < 0xb)
+	if (door->doorRot[1] < 0x400)
 	{
-		scaler = (s16 *)R232.keyFrame;
+		door->doorRot[1] += 0x10;
+
+		// right-hand door rot[x,y,z]
+		desiredRot[0] = door->doorRot[0];
+		desiredRot[1] = doorInst->instDef->rot[1] - door->doorRot[1];
+		desiredRot[2] = door->doorRot[2];
+
+		// converted to TEST in rebuildPS1
+		ConvertRotToMatrix(&door->otherDoor->matrix, &desiredRot[0]);
+
+		// left-hand door rot[x,y,z]
+		desiredRot[1] = doorInst->instDef->rot[1] + door->doorRot[1];
+
+		// converted to TEST in rebuildPS1
+		ConvertRotToMatrix(&doorInst->matrix, &desiredRot[0]);
+
+		// if less than 11 frames have passed,
+		// decrease key scale, then quit function
+		if (door->keyShrinkFrame < 0xb)
+		{
+			scaler = (s16 *)R232.keyFrame;
+
+			// loop through 4 keys
+			for (i = 0; i < 4; i++)
+			{
+				keyInst = door->keyInst[i];
+				// if instance exists
+				if (keyInst != NULL)
+				{
+					// decrease scale of key
+					keyInst->scale[0] = scaler[door->keyShrinkFrame];
+					keyInst->scale[1] = scaler[door->keyShrinkFrame];
+					keyInst->scale[2] = scaler[door->keyShrinkFrame];
+				}
+			}
+
+			door->keyShrinkFrame++;
+
+			return;
+		}
 
 		// loop through 4 keys
 		for (i = 0; i < 4; i++)
 		{
-			keyInst = door->keyInst[i];
-			// if instance exists
-			if (keyInst != NULL)
-			{
-				// decrease scale of key
-				keyInst->scale[0] = scaler[door->keyShrinkFrame];
-				keyInst->scale[1] = scaler[door->keyShrinkFrame];
-				keyInst->scale[2] = scaler[door->keyShrinkFrame];
-			}
-		}
-
-		door->keyShrinkFrame++;
-
-		return;
-	}
-
-	// loop through 4 keys
-	for (i = 0; i < 4; i++)
-	{
-		if (door->keyInst[i] != NULL)
-		{
 			INSTANCE_Death(door->keyInst[i]);
 			door->keyInst[i] = NULL;
 		}
-	}
 
-	// if not last frame of opening door
-	if (door->doorRot[1] < 0x400)
 		return;
-
+	}
 
 	// == Door is fully open ==
 
