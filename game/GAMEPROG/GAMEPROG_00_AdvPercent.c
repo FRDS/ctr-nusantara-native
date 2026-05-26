@@ -1,9 +1,12 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800265c0-0x8002689c.
 void GAMEPROG_AdvPercent(struct AdvProgress *adv)
 {
 	int i;
 	int percent;
+	int oxidePercent;
+	int allGoldOrPlatinumRelics;
 	int numGems;
 	int bitIndex;
 	struct MetaDataLEV *mdLev;
@@ -13,6 +16,8 @@ void GAMEPROG_AdvPercent(struct AdvProgress *adv)
 
 	// start counter
 	percent = 0;
+	oxidePercent = 0;
+	allGoldOrPlatinumRelics = 1;
 	numGems = 0;
 
 	// erase counters
@@ -83,29 +88,24 @@ void GAMEPROG_AdvPercent(struct AdvProgress *adv)
 			}
 		}
 
-		// if beat oxide once, add 2% for first timie (2-0=2%)
-		// if beat oxide twice, add 1% for second time (2-1=1%)
+		// first bit is 2%, second bit upgrades the total Oxide bonus to 3%
 		if (i < 2)
 		{
 			// first bit of beating oxide
 			bitIndex = 0x73 + i;
 			if (CHECK_ADV_BIT(adv->rewards, bitIndex) != 0)
 			{
-				percent += 2 - i;
+				oxidePercent = (i == 0) ? 2 : 3;
 			}
 		}
 	}
 
-	// assume all tracks have
-	// gold or platinum relic
-	percent += 1;
-
-	// check all tracks just for relics
+	// check whether all tracks have gold or platinum relic
 	for (i = 0; i < 18; i++)
 	{
 		// first bit of gold relic
 		bitIndex = 0x28 + i;
-		if (CHECK_ADV_BIT(adv->rewards, bitIndex) != 0)
+		if ((allGoldOrPlatinumRelics != 0) && (CHECK_ADV_BIT(adv->rewards, bitIndex) != 0))
 		{
 			// check next relic
 			continue;
@@ -113,14 +113,11 @@ void GAMEPROG_AdvPercent(struct AdvProgress *adv)
 
 		// if relic is not unlocked,
 		// then extra 1% is not earned
-		percent -= 1;
-
-		// stop checking relics
-		break;
+		allGoldOrPlatinumRelics = 0;
 	}
 
 	percent += gGT->currAdvProfile.numRelics * 2 + gGT->currAdvProfile.numTrophies * 2 + gGT->currAdvProfile.numKeys + gGT->currAdvProfile.numCtrTokens.total +
-	           gGT->currAdvProfile.numCtrTokens.purple + numGems;
+	           gGT->currAdvProfile.numCtrTokens.purple + numGems + oxidePercent + allGoldOrPlatinumRelics;
 
 	gGT->currAdvProfile.completionPercent = percent;
 }
