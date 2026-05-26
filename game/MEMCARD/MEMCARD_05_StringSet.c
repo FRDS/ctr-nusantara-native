@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003d730-0x8003d7d8.
 void MEMCARD_StringSet(char *dstString, int slotIdx, char *srcString)
 
 {
