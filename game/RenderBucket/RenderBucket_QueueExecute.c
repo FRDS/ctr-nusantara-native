@@ -1569,8 +1569,8 @@ void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, u_long *otMem, void *
 	u32 lodMask = (u32)(u8)(u32)lod;
 	int count = (int)(u8)numPlyr;
 
-	// NOTE(aalhendi): ASM-verified loop/control shape for
-	// 0x80070720-0x8007084c. Retail enters QueueDraw through a scratch/register
+	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80070720-0x8007084c.
+	// Retail enters QueueDraw through a scratch/register
 	// ABI; native passes the same state as explicit C parameters.
 	RenderBucket_CopyDispatchTables();
 
@@ -1596,8 +1596,8 @@ void *RenderBucket_QueueNonLevInstances(struct Item *item, u_long *otMem, void *
 	u32 lodMask = (u32)(u8)(u32)lod;
 	int count = (int)(u8)numPlyr;
 
-	// NOTE(aalhendi): ASM-verified loop/control shape for
-	// 0x8007084c-0x80070950. Retail enters QueueDraw through a scratch/register
+	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8007084c-0x80070950.
+	// Retail enters QueueDraw through a scratch/register
 	// ABI; native passes the same state as explicit C parameters.
 	RenderBucket_CopyDispatchTables();
 
