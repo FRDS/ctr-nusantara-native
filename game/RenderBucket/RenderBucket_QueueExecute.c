@@ -1883,7 +1883,8 @@ static struct RenderBucketUncompressResult RenderBucket_TransformSplitDecodedVer
 	if ((flags & 4) != 0)
 		return result;
 
-	// NOTE(aalhendi): ASM-verified retail 0x8006bf30/0x8006cdec split
+	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8006bf30-0x8006c124 and
+	// 0x8006cdec-0x8006d094 split
 	// transform tail: packed VXY/VZ through the split light matrix with MVMVA.
 	MTC2(result.packed.xy, 0);
 	MTC2(result.packed.z, 1);
@@ -1898,6 +1899,7 @@ static struct RenderBucketUncompressResult RenderBucket_TransformSplitDecodedVer
 
 static struct RenderBucketUncompressResult RenderBucket_UncompressAnimationFrame_Split(struct RenderBucketDrawContext *ctx, u32 command, u16 stackIndex)
 {
+	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8006bf30-0x8006c124.
 	return RenderBucket_TransformSplitDecodedVertex(ctx, command, stackIndex, RenderBucket_UncompressAnimationFrame(ctx, command, stackIndex));
 }
 
