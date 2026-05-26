@@ -30,6 +30,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 
 	elapsedFrames = D230.trackSel_transitionFrames;
 
+	// NOTE(aalhendi): ASM-verified NTSC-U 926 overlay 230 0x800b00d4-0x800b02b0.
 	// if you are not in track selection menu
 	if (D230.trackSel_transitionState != IN_MENU)
 	{
@@ -139,6 +140,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 	currTrack = menu->rowSelected;
 	sdata->trackSelBackup = currTrack;
 
+	// NOTE(aalhendi): ASM-verified NTSC-U 926 overlay 230 0x800b02b0-0x800b04c8.
 	// if lap selection menu is closed
 	if (D230.trackSel_boolOpenLapBox == 0)
 	{
