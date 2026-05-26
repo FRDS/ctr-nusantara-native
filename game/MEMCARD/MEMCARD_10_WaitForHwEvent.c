@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003dae4-0x8003db54.
 u8 MEMCARD_WaitForHwEvent(void)
 {
 	while (1)

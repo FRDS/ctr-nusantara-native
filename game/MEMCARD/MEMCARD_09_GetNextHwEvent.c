@@ -1,5 +1,6 @@
 #include <common.h>
 
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003da68-0x8003dae4.
 u8 MEMCARD_GetNextHwEvent(void)
 {
 	// IOE = IO End, meaning "finished without error"
