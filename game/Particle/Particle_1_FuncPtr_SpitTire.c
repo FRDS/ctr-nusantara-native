@@ -1,6 +1,6 @@
 #include <common.h>
 
-// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003ec18-0x8003ee20
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003ec18-0x8003ee20.
 void Particle_FuncPtr_SpitTire(struct Particle *p)
 {
 	int rng;
