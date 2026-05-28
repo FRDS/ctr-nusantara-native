@@ -82,7 +82,7 @@ static void Vector_BakeMatrixTable_BakeBlastedOffsets(void)
 
 void Vector_BakeMatrixTable(void)
 {
-	// NOTE(aalhendi): Source-backed NTSC-U 926 0x80057884-0x80057c20.
+	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80057884-0x80057c44.
 	// Retail bakes authored rot/scale vehicle-animation entries in-place before
 	// VehPhysForce_TranslateMatrix consumes entry+8 as a MATRIX.
 	if (sdata->unk_UsedIn_FUN_80057884 != 0)
