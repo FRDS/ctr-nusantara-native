@@ -29,7 +29,7 @@ void UI_RenderFrame_Racing()
 	char cVar22;
 	s16 wumpaModel_Pos[2];
 	s16 LetterCTR_Pos[2];
-	char string[8];
+	char string[24];
 	s16 turboCount_Pos[2];
 	u16 local_30[2];
 	struct Thread *playerThread;
@@ -106,7 +106,7 @@ void UI_RenderFrame_Racing()
 		sdata->HudAndDebugFlags = 8;
 	}
 
-	if (gGT->level1->ptrSpawnType1 != 0)
+	if ((gGT->level1->ptrSpawnType1 != 0) && (gGT->level1->ptrSpawnType1->count != 0))
 	{
 		void **pointers = ST1_GETPOINTERS(gGT->level1->ptrSpawnType1);
 		levPtrMap = pointers[ST1_MAP];
@@ -385,12 +385,26 @@ void UI_RenderFrame_Racing()
 
 					partTimeVariable1 = playerStruct->BattleHUD.scoreDelta;
 
-					string[0] = '+';
-					if (partTimeVariable1 < 0)
-						string[0] = '-';
+					if ((gameMode1 & LIFE_LIMIT) == 0)
+					{
+						if (partTimeVariable1 < 1)
+						{
+							fmt = &sdata->s_subtractInt[0];
 
-					string[1] = '0' + partTimeVariable1;
-					string[2] = 0;
+							if (partTimeVariable1 < 0)
+								partTimeVariable1 = -partTimeVariable1;
+						}
+						else
+						{
+							fmt = &sdata->s_additionLongInt[0];
+						}
+					}
+					else
+					{
+						fmt = &sdata->s_subtractLongInt[0];
+					}
+
+					sprintf((char *)&string[0], fmt, partTimeVariable1);
 
 					UI_Lerp2D_HUD(&wumpaModel_Pos[0], (int)playerStruct->BattleHUD.startX, (int)playerStruct->BattleHUD.startY,
 					              (int)(hudStructPtr[0xD].x + 0x20), (int)(hudStructPtr[0xD].y + 8), playerStruct->BattleHUD.cooldown, 5);
@@ -420,8 +434,6 @@ void UI_RenderFrame_Racing()
 				UI_DrawBattleScores((int)hudStructPtr[0xD].x, (int)hudStructPtr[0xD].y, playerStruct);
 			}
 
-// not rewritten yet
-#ifndef REBUILD_PS1
 			if (
 			    // if you're in adventure mode or Arcade mode and
 			    ((gameMode1 & (ARCADE_MODE | ADVENTURE_MODE)) != 0) &&
@@ -431,7 +443,6 @@ void UI_RenderFrame_Racing()
 			{
 				AA_EndEvent_DisplayTime((u32)playerStruct->driverID, 0);
 			}
-#endif
 
 			partTimeVariable5 = gameMode1;
 
@@ -497,10 +508,10 @@ void UI_RenderFrame_Racing()
 			// If you're in end-of-race and Battle
 			else if ((partTimeVariable5 & 0x200020) == 0x200020)
 			{
-				partTimeVariable5 = (u32)((gGT->timer & 1) == 0);
+				partTimeVariable5 = (u32)((gGT->timer & 1) == 0) << 2;
 
 				// Draw the "st", "nd", "rd" suffix after "1st, 2nd, 3rd, etc"
-				UI_DrawPosSuffix(hudStructPtr[5].x, hudStructPtr[5].y, playerStruct, (s16)(partTimeVariable5 << 2));
+				UI_DrawPosSuffix(hudStructPtr[5].x, hudStructPtr[5].y, playerStruct, (s16)partTimeVariable5);
 
 				// Get Color Data
 				ptrColor = data.ptrColor[partTimeVariable5];
@@ -694,8 +705,10 @@ void UI_RenderFrame_Racing()
 				                   (JUSTIFY_RIGHT | ORANGE_RED));
 
 
+				sprintf((char *)&string[0], &sdata->s_str[0], sdata->lngStrings[0x24B]);
+
 				// Draw the string
-				DecalFont_DrawLine(sdata->lngStrings[0x24B], (int)(s16)turboCount_Pos[0], (int)turboCount_Pos[1], FONT_BIG, (JUSTIFY_RIGHT | ORANGE));
+				DecalFont_DrawLine((char *)&string[0], (int)(s16)turboCount_Pos[0], (int)turboCount_Pos[1], FONT_BIG, (JUSTIFY_RIGHT | ORANGE));
 
 				backBuffer = gGT->backBuffer;
 				primMemCurr = backBuffer->primMem.curr;
@@ -745,7 +758,7 @@ void UI_RenderFrame_Racing()
 		}
 	}
 
-	if ((levPtrMap != 0) && ((gameMode1 & BATTLE_MODE) == 0))
+	if (levPtrMap != 0)
 	{
 		if (((numPlyr == 1)
 
