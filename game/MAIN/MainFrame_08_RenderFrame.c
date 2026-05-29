@@ -1283,6 +1283,8 @@ __attribute__((optimize("O0"))) int ReadyToBreak(struct GameTracker *gGT)
 
 void RenderVSYNC(struct GameTracker *gGT)
 {
+	gGT->clockDurationStall = Timer_GetTime_Total();
+
 	// render checkered flag
 	if ((gGT->renderFlags & 0x1000) != 0)
 	{
@@ -1336,6 +1338,8 @@ void RenderSubmit(struct GameTracker *gGT)
 {
 	// 1 VSYNC = 60fps
 	// 2 VSYNCs = 30fps
+
+	gGT->clockDurationStall = Timer_GetTime_Elapsed(gGT->clockDurationStall, 0);
 
 #if defined(CTR_NATIVE)
 
