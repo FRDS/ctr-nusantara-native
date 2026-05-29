@@ -546,6 +546,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 			    // If lap selection menu is closed
 			    (D230.trackSel_boolOpenLapBox == 0))
 			{
+				const int mapBoxHeight = 100;
 				int mapID = selectMenu[menu->rowSelected].mapTextureID;
 				struct Icon *iconMap0 = gGT->ptrIcons[mapID + 0];
 				struct Icon *iconMap1 = gGT->ptrIcons[mapID + 1];
@@ -582,8 +583,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 
 					    // Y
 					    D230.drawMapOffset[iVar18].offsetY + p.y + (D230.transitionMeta_trackSel[2].currY - D230.transitionMeta_trackSel[1].currY) + 0x49 +
-					        0x22 + 0x10 + // idk how bitshifting pulls 0x10 in ghidra, but that's it
-					        (iVar10 >> 1),
+					        0x22 + (mapBoxHeight >> 1) + (iVar10 >> 1),
 
 					    // pointer to PrimMem struct
 					    &gGT->backBuffer->primMem,
