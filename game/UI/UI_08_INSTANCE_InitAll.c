@@ -162,9 +162,19 @@ void UI_INSTANCE_InitAll(void)
 	// Make a token
 	sdata->ptrToken = UI_INSTANCE_BirthWithThread(0x7d, (int)UI_ThTick_Reward, 0x12, 0, 0, (int)sdata->s_token);
 
-	sdata->ptrHudC->flags |= 0x80;
-	sdata->ptrHudT->flags |= 0x80;
-	sdata->ptrHudR->flags |= 0x80;
+#if defined(CTR_NATIVE)
+	// NOTE(aalhendi): PSX writes the hidden C/T/R flags through null HUD pointers in Garage; native cannot.
+	if (sdata->ptrHudC != NULL)
+#endif
+		sdata->ptrHudC->flags |= 0x80;
+#if defined(CTR_NATIVE)
+	if (sdata->ptrHudT != NULL)
+#endif
+		sdata->ptrHudT->flags |= 0x80;
+#if defined(CTR_NATIVE)
+	if (sdata->ptrHudR != NULL)
+#endif
+		sdata->ptrHudR->flags |= 0x80;
 
 	// make copy of Token pointer
 	token = sdata->ptrToken;

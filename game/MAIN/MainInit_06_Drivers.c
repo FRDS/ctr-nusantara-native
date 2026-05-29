@@ -1,6 +1,25 @@
 #include <common.h>
 
-// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003b6d0-0x8003b934; CTR_NATIVE gates host-only model repairs.
+#if defined(CTR_NATIVE)
+static int MainInit_FindPlayerModelListStart(void)
+{
+	int modelIndex = 0;
+	struct Model *m;
+
+	while (1)
+	{
+		m = sdata->PLYROBJECTLIST[modelIndex++];
+
+		if (m == NULL)
+			return 0;
+
+		if (*(int *)&m->name[0] == *(int *)&sdata->s_token[0])
+			return modelIndex;
+	}
+}
+#endif
+
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003b6d0-0x8003b934; CTR_NATIVE gates TT ghost model publication.
 void MainInit_Drivers(struct GameTracker *gGT)
 {
 	char i;
@@ -103,65 +122,6 @@ void MainInit_Drivers(struct GameTracker *gGT)
 		}
 	}
 
-#if defined(CTR_NATIVE)
-	// NOTE(aalhendi): Garage adventure MPKs carry one selected driver; retail menu birth already assigns it.
-	if (gGT->levelID != ADVENTURE_GARAGE)
-	{
-		i = 0;
-		int driverID = 0;
-		struct Model *m;
-		while (1)
-		{
-			m = sdata->PLYROBJECTLIST[i++];
-
-			// NOTE(aalhendi): Native MPK model lists can end before the menu token.
-			if (m == 0)
-			{
-				i = 0;
-				break;
-			}
-
-			// "token"
-			if (*(int *)&m->name[0] == 0x656b6f74)
-			{
-				// Player 1 always comes after Token
-				break;
-			}
-		}
-
-		if (gGT->numPlyrCurrGame == 1)
-		{
-			driverID = 0;
-		}
-
-		else if (gGT->numPlyrCurrGame == 2)
-		{
-			gGT->drivers[0]->instSelf->model = data.driverModelExtras[0];
-			gGT->drivers[1]->instSelf->model = data.driverModelExtras[1];
-			driverID = 2;
-		}
-
-		else
-		{
-			gGT->drivers[0]->instSelf->model = data.driverModelExtras[0];
-			gGT->drivers[1]->instSelf->model = data.driverModelExtras[1];
-			gGT->drivers[2]->instSelf->model = data.driverModelExtras[2];
-
-			if (gGT->numPlyrCurrGame == 4)
-				gGT->drivers[3]->instSelf->model = sdata->PLYROBJECTLIST[i++];
-
-			driverID = 8;
-		}
-
-		for (driverID; driverID < 7; driverID++)
-		{
-			if (gGT->drivers[driverID] == 0)
-				break;
-			gGT->drivers[driverID]->instSelf->model = sdata->PLYROBJECTLIST[i++];
-		}
-	}
-#endif
-
 	// if you're in time trial, not main menu, not loading.
 	// basically, if you're in time trial gameplay
 	if ((gameMode & 0x20022000) == TIME_TRIAL)
@@ -171,6 +131,7 @@ void MainInit_Drivers(struct GameTracker *gGT)
 		GhostTape_Start();
 
 #if defined(CTR_NATIVE)
+		int modelIndex = MainInit_FindPlayerModelListStart();
 
 		// 0: human ghost
 		// 1: n tropy / oxide
@@ -179,10 +140,11 @@ void MainInit_Drivers(struct GameTracker *gGT)
 			// N Tropy to Oxide
 			void **pointers = ST1_GETPOINTERS(gGT->level1->ptrSpawnType1);
 			if (sdata->ptrGhostTape[1]->gh == pointers[ST1_NOXIDE])
-				i++;
+				modelIndex++;
 		}
 
-		gGT->threadBuckets[GHOST].thread->inst->model = sdata->PLYROBJECTLIST[i++];
+		// NOTE(aalhendi): Native TT MPKs keep ghost driver models after the menu token.
+		gGT->threadBuckets[GHOST].thread->inst->model = sdata->PLYROBJECTLIST[modelIndex++];
 
 		struct Model **humanPlyrDriverModel = &gGT->threadBuckets[PLAYER].thread->inst->model;
 
