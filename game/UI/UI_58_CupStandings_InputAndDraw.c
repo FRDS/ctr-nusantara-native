@@ -2,6 +2,7 @@
 
 void UI_CupStandings_InputAndDraw(void)
 {
+	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800562fc-0x800572d0.
 	// Too many variables, many reused registers
 	// same variable names used for different purposes
 	struct GameTracker *gGT;
