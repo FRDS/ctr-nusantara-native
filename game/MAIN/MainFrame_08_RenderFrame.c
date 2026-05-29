@@ -844,29 +844,31 @@ void RenderBucket_ExecuteAllInstances(struct GameTracker *gGT)
 #if !defined(REBUILD_PS1) || defined(CTR_NATIVE)
 void RenderAllTires(struct GameTracker *gGT)
 {
-	int i;
-	struct Thread *th;
 	int numPlyrCurrGame;
 	struct PrimMem *gGT_primMem;
+
 	if ((gGT->renderFlags & 0x80) == 0)
 		return;
-
-	// replace checking number of AIs, with
-	// checking if the threadBucket exists,
-	// then roll this up into a loop
 
 	gGT_primMem = &gGT->backBuffer->primMem;
 	numPlyrCurrGame = gGT->numPlyrCurrGame;
 
-	// player, robot, ghost
-	for (i = 0; i < 3; i++)
+	if (gGT->threadBuckets[PLAYER].thread != 0)
 	{
-		th = gGT->threadBuckets[i].thread;
-		if (th == 0)
-			continue;
+		DrawTires_Solid(gGT->threadBuckets[PLAYER].thread, gGT_primMem, numPlyrCurrGame);
+		DrawTires_Reflection(gGT->threadBuckets[PLAYER].thread, gGT_primMem, numPlyrCurrGame);
+	}
 
-		DrawTires_Solid(th, gGT_primMem, numPlyrCurrGame);
-		DrawTires_Reflection(th, gGT_primMem, numPlyrCurrGame);
+	if (gGT->numBotsNextGame != 0)
+	{
+		DrawTires_Solid(gGT->threadBuckets[ROBOT].thread, gGT_primMem, numPlyrCurrGame);
+		DrawTires_Reflection(gGT->threadBuckets[ROBOT].thread, gGT_primMem, numPlyrCurrGame);
+	}
+
+	if (gGT->threadBuckets[GHOST].thread != 0)
+	{
+		DrawTires_Solid(gGT->threadBuckets[GHOST].thread, gGT_primMem, numPlyrCurrGame);
+		DrawTires_Reflection(gGT->threadBuckets[GHOST].thread, gGT_primMem, numPlyrCurrGame);
 	}
 }
 #endif
