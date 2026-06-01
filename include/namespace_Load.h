@@ -93,7 +93,7 @@ struct BigHeader
 	// "numEntry" number of entries
 	// struct BigEntry entry[0];
 };
-#define BIG_GETENTRY(x) (struct BigEntry *)((u32)x + sizeof(struct BigHeader))
+#define BIG_GETENTRY(x) (struct BigEntry *)((char *)(x) + sizeof(struct BigHeader))
 
 struct DramPointerMap
 {
@@ -102,7 +102,7 @@ struct DramPointerMap
 	// int offsets[0];
 };
 
-#define DRAM_GETOFFSETS(x)    ((u32)x + sizeof(struct DramPointerMap))
+#define DRAM_GETOFFSETS(x)    ((int *)((char *)(x) + sizeof(struct DramPointerMap)))
 
 #define DRAM_SET_UNPATCHED(x) *(int *)x = 0
 
@@ -121,7 +121,7 @@ struct VramHeader
 	// u8 pixels[0];
 };
 
-#define VRAMHEADER_GETPIXLES(x) (u32 *)((u32)x + sizeof(struct VramHeader))
+#define VRAMHEADER_GETPIXLES(x) (u32 *)((char *)(x) + sizeof(struct VramHeader))
 
 enum LevVramIndex
 {
