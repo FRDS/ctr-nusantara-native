@@ -50,12 +50,30 @@ struct Prize
 	// 0x2c -- size of struct
 };
 
-struct unknown233
+struct CsParticleConfigMeta
 {
-	void *unknown1;
-	int unknown2;
-	int unknown3;
+	u8 iconGroupIndex;
+	u8 frameOffset;
+	u8 count;
+	u8 flags;
 };
+
+struct CsParticleConfigSpawn
+{
+	s8 modelDelta;
+	u8 pad[3];
+};
+
+struct CsParticleConfig
+{
+	struct ParticleEmitter *emitter;
+	struct CsParticleConfigMeta meta;
+	struct CsParticleConfigSpawn spawn;
+};
+
+_Static_assert(sizeof(struct CsParticleConfigMeta) == 0x4);
+_Static_assert(sizeof(struct CsParticleConfigSpawn) == 0x4);
+_Static_assert(sizeof(struct CsParticleConfig) == 0xc);
 
 union CsOpcodeArg
 {
@@ -303,7 +321,7 @@ extern struct
 	struct ParticleEmitter particleEmitterData[63];
 
 	// 800b146c
-	struct unknown233 particleConfigs[8];
+	struct CsParticleConfig particleConfigs[8];
 
 	// 800b14cc
 	// NOTE(aalhendi): Retail cs_opcodeMeta prefix. Native interpreter uses

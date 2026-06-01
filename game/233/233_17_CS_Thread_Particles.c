@@ -5,7 +5,7 @@ void CS_Thread_Particles(struct Thread *t)
 {
 	struct CutsceneObj *cs = t->object;
 	struct Instance *inst = t->inst;
-	struct unknown233 *entry;
+	struct CsParticleConfig *entry;
 	s8 particleID;
 
 	if (inst == NULL)
@@ -22,16 +22,15 @@ void CS_Thread_Particles(struct Thread *t)
 
 	while (1)
 	{
-		u8 *meta = (u8 *)&entry->unknown2;
-		int iconGroupIndex = meta[0];
-		int frameOffset = meta[1];
-		int count = meta[2];
-		int flags = meta[3];
-		s8 modelDelta = ((s8 *)&entry->unknown3)[0];
+		int iconGroupIndex = entry->meta.iconGroupIndex;
+		int frameOffset = entry->meta.frameOffset;
+		int count = entry->meta.count;
+		int flags = entry->meta.flags;
+		s8 modelDelta = entry->spawn.modelDelta;
 
 		for (int i = 0; i < count; i++)
 		{
-			struct Particle *p = Particle_Init(0, sdata->gGT->iconGroup[iconGroupIndex], (struct ParticleEmitter *)entry->unknown1);
+			struct Particle *p = Particle_Init(0, sdata->gGT->iconGroup[iconGroupIndex], entry->emitter);
 
 			if (p != NULL)
 			{
