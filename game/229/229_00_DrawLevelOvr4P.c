@@ -11,12 +11,15 @@ enum Ovr229DrawLevelConstants
 	OVR229_SPLIT_GROUND_LIST_A_HANDLER = 0x800a29dc,
 	OVR229_SPLIT_GROUND_RENDERED_A_HANDLER = 0x800a386c,
 	OVR229_SPLIT_GROUND_LIST_B_HANDLER = 0x800a481c,
+	OVR229_SPLIT_GROUND_RENDERED_B_HANDLER = 0x800a56ac,
 	OVR229_WATER_RENDERED_DEFAULT_WRAPPER = 0x800a22d8,
 	OVR229_WATER_BSP_LIST_PRIM_RESERVE_BIAS = 0x1d40,
 	OVR229_SPLIT_GROUND_LIST_B_PRIM_RESERVE_BIAS = 0x23c0,
 	OVR229_SPLIT_GROUND_RENDERED_A_SETUP_INDEX = 3,
 	OVR229_SPLIT_GROUND_LIST_B_SETUP_INDEX = 4,
+	OVR229_SPLIT_GROUND_RENDERED_B_SETUP_INDEX = 5,
 	OVR229_CANONICAL_GROUND_4X2_LIST_SETUP_INDEX = 5,
+	OVR229_CANONICAL_GROUND_4X2_RENDERED_SETUP_INDEX = 6,
 	OVR229_CANONICAL_DYNAMIC_RENDERED_SETUP_INDEX = 8,
 };
 
@@ -62,6 +65,8 @@ static u32 Ovr229_800a106c_TranslateCopiedWord(int setupIndex, const struct Over
 		canonicalSetupIndex = OVR229_CANONICAL_DYNAMIC_RENDERED_SETUP_INDEX;
 	else if (setupIndex == OVR229_SPLIT_GROUND_LIST_B_SETUP_INDEX)
 		canonicalSetupIndex = OVR229_CANONICAL_GROUND_4X2_LIST_SETUP_INDEX;
+	else if (setupIndex == OVR229_SPLIT_GROUND_RENDERED_B_SETUP_INDEX)
+		canonicalSetupIndex = OVR229_CANONICAL_GROUND_4X2_RENDERED_SETUP_INDEX;
 	else
 		return value;
 
@@ -241,17 +246,36 @@ static int Ovr229_800a29dc_DrawSplitGroundListA(void *bucketValue, struct PushBu
 static int Ovr229_800a386c_DrawSplitGroundRenderedA(void *bucketValue, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem)
 {
 	DrawLevelOvr1P_SetPrimReserveBias(OVR229_WATER_BSP_LIST_PRIM_RESERVE_BIAS);
+	DrawLevelOvr1P_SetSplitGroundThresholdScratch();
 	return Ovr226_800a7ba8_DrawDynamicRenderedList((struct QuadBlock **)bucketValue, pb, mesh, primMem);
 }
 
 static int Ovr229_800a481c_DrawSplitGroundListB(void *bucketValue, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem,
                                                 const int *visFaceList)
 {
+	int result;
+
 	DrawLevelOvr1P_SetPrimReserveBias(OVR229_SPLIT_GROUND_LIST_B_PRIM_RESERVE_BIAS);
-	return Ovr226_800a4fa0_DrawGround4x2BspList((struct VisMemBspListNode *)bucketValue, pb, mesh, primMem, visFaceList);
+	DrawLevelOvr1P_SetSplitGroundThresholdScratch();
+	DrawLevelOvr1P_SetMosaicReloadSpanOverride(DRAW_LEVEL_OVR1P_SPLIT_GROUND_MOSAIC_RELOAD_SPAN);
+	result = Ovr226_800a4fa0_DrawGround4x2BspList((struct VisMemBspListNode *)bucketValue, pb, mesh, primMem, visFaceList);
+	DrawLevelOvr1P_SetMosaicReloadSpanOverride(0);
+	return result;
 }
 
-static int Ovr229_800a1178_800a56ac_BucketDispatch(u32 handlerAddress, void *bucketValue, struct PushBuffer *pb, struct mesh_info *mesh,
+static int Ovr229_800a56ac_DrawSplitGroundRenderedB(void *bucketValue, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem)
+{
+	int result;
+
+	DrawLevelOvr1P_SetPrimReserveBias(OVR229_SPLIT_GROUND_LIST_B_PRIM_RESERVE_BIAS);
+	DrawLevelOvr1P_SetSplitGroundThresholdScratch();
+	DrawLevelOvr1P_SetMosaicReloadSpanOverride(DRAW_LEVEL_OVR1P_SPLIT_GROUND_MOSAIC_RELOAD_SPAN);
+	result = Ovr226_800a5e5c_DrawGround4x2RenderedList((struct QuadBlock **)bucketValue, pb, mesh, primMem);
+	DrawLevelOvr1P_SetMosaicReloadSpanOverride(0);
+	return result;
+}
+
+static int Ovr229_800a1178_800a665c_BucketDispatch(u32 handlerAddress, void *bucketValue, struct PushBuffer *pb, struct mesh_info *mesh,
                                                    struct PrimMem *primMem, const int *visFaceList)
 {
 	if (handlerAddress == OVR229_WATER_BSP_LIST_HANDLER)
@@ -269,7 +293,10 @@ static int Ovr229_800a1178_800a56ac_BucketDispatch(u32 handlerAddress, void *buc
 	if (handlerAddress == OVR229_SPLIT_GROUND_LIST_B_HANDLER)
 		return Ovr229_800a481c_DrawSplitGroundListB(bucketValue, pb, mesh, primMem, visFaceList);
 
-	// NOTE(aalhendi): Bucket families outside 0x800a1178..0x800a56ac remain
+	if (handlerAddress == OVR229_SPLIT_GROUND_RENDERED_B_HANDLER)
+		return Ovr229_800a56ac_DrawSplitGroundRenderedB(bucketValue, pb, mesh, primMem);
+
+	// NOTE(aalhendi): Bucket families outside 0x800a1178..0x800a665c remain
 	// unported. Fail closed if this audit-only entry reaches them.
 	return 0;
 }
@@ -373,5 +400,5 @@ int Ovr229_800a0cbc_Entry(void *LevRenderList, struct PushBuffer *pb, struct BSP
                           void *VisMem18, void *VisMem1C, void *waterEnvMap)
 {
 	return Ovr229_800a0cbc_EntryWithCallbacks(LevRenderList, pb, bspList, primMem, VisMem10, VisMem14, VisMem18, VisMem1C, waterEnvMap,
-	                                          Ovr229_800a1178_800a56ac_BucketDispatch, Ovr229_UnportedClipConsumer);
+	                                          Ovr229_800a1178_800a665c_BucketDispatch, Ovr229_UnportedClipConsumer);
 }
