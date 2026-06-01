@@ -5,6 +5,7 @@ int Bank_AssignSpuAddrs()
 {
 	int i;
 	int ret;
+	int audioAllocPtr;
 
 	// if Stage 4: Complete
 	if (sdata->bankLoadStage == 4)
@@ -83,11 +84,16 @@ int Bank_AssignSpuAddrs()
 
 		// not last bank needed?
 		if (sdata->bankFlags == 0)
+		{
 			sdata->ptrLastBank->min = sdata->audioAllocPtr;
+			audioAllocPtr = sdata->audioAllocPtr;
+		}
 
 		// last bank needed
 		else
-			sdata->audioAllocPtr = sdata->ptrLastBank->min;
+		{
+			audioAllocPtr = sdata->ptrLastBank->min;
+		}
 
 		// === Assign SpuEntry for all "new" samples ===
 
@@ -105,12 +111,12 @@ int Bank_AssignSpuAddrs()
 
 			if (sae->spuAddr == 0)
 			{
-				sae->spuAddr = sdata->audioAllocPtr;
+				sae->spuAddr = audioAllocPtr;
 			}
-			sdata->audioAllocPtr += sae->spuSize;
+			audioAllocPtr += sae->spuSize;
 
 #if 0
-			printf("%08x\n", sdata->audioAllocPtr);
+			printf("%08x\n", audioAllocPtr);
 #endif
 		}
 
