@@ -8,13 +8,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NATIVE_INPUT_MAX_CONTROLLERS  2
+#define NATIVE_INPUT_MAX_CONTROLLERS  PLATFORM_INPUT_PAD_COUNT
 #define NATIVE_INPUT_PAD_DIGITAL      0x41
 #define NATIVE_INPUT_PAD_ANALOG       0x73
 #define NATIVE_INPUT_PAD_DISCONNECT   0xff
 #define NATIVE_INPUT_AXIS_DEADZONE    500
 #define NATIVE_INPUT_MAP_FLAG_AXIS    0x4000
 #define NATIVE_INPUT_MAP_FLAG_INVERSE 0x8000
+#define NATIVE_INPUT_STATE_MAGIC      0x49525443
+#define NATIVE_INPUT_STATE_VERSION    1
 
 // NOTE(aalhendi): Native input preserves behavior from PsyCross's
 // MIT-licensed pad implementation while moving host ownership into ctr-native.
@@ -51,15 +53,6 @@ struct NativeInputControllerMapping
 	s32 gc_axis_right_x, gc_axis_right_y;
 };
 
-struct NativeInputPadSnapshot
-{
-	u8 status;
-	u8 id;
-	u16 buttons;
-	u8 analog[4];
-	s32 connected;
-};
-
 struct NativeInputController
 {
 	Sint32 deviceIndex;
@@ -68,7 +61,26 @@ struct NativeInputController
 	u8 *padData;
 	s32 analogEnabled;
 	s32 switchingAnalog;
-	struct NativeInputPadSnapshot snapshot;
+	struct PlatformInputPadSnapshot snapshot;
+};
+
+struct NativeInputControllerStateSnapshot
+{
+	struct PlatformInputPadSnapshot snapshot;
+	s32 analogEnabled;
+	s32 switchingAnalog;
+	s32 controllerToSlotMapping;
+};
+
+struct NativeInputStateSnapshot
+{
+	u32 magic;
+	u32 version;
+	u32 size;
+	s32 activeKeyboardControllers;
+	s32 installedSnapshotsActive;
+	struct PlatformInputPadSnapshot installedSnapshots[NATIVE_INPUT_MAX_CONTROLLERS];
+	struct NativeInputControllerStateSnapshot controllers[NATIVE_INPUT_MAX_CONTROLLERS];
 };
 
 static struct NativeInputControllerMapping s_controllerMapping;
@@ -76,30 +88,44 @@ static struct NativeInputKeyboardMapping s_keyboardMapping;
 static s32 s_controllerToSlotMapping[NATIVE_INPUT_MAX_CONTROLLERS] = {0, -1};
 
 static struct NativeInputController s_controllers[NATIVE_INPUT_MAX_CONTROLLERS];
+static struct PlatformInputPadSnapshot s_installedSnapshots[NATIVE_INPUT_MAX_CONTROLLERS];
 static const u8 *s_keyboardState;
 static s32 s_inputInitialized;
+static s32 s_installedSnapshotsActive;
 static s32 s_activeKeyboardControllers = 0x1;
 
 extern s32 g_padCommEnable;
 
+static u16 NativeInput_GetSnapshotButtons(const struct PlatformInputPadSnapshot *snapshot)
+{
+	return (u16)(snapshot->buttons[0] | (snapshot->buttons[1] << 8));
+}
+
+static void NativeInput_SetSnapshotButtons(struct PlatformInputPadSnapshot *snapshot, u16 buttons)
+{
+	snapshot->buttons[0] = (u8)(buttons & 0xff);
+	snapshot->buttons[1] = (u8)(buttons >> 8);
+}
+
 static void NativeInput_ResetSnapshot(s32 slot)
 {
-	struct NativeInputPadSnapshot *snapshot = &s_controllers[slot].snapshot;
+	struct PlatformInputPadSnapshot *snapshot = &s_controllers[slot].snapshot;
 
 	snapshot->connected = slot == 0;
 	snapshot->status = snapshot->connected ? 0 : NATIVE_INPUT_PAD_DISCONNECT;
 	snapshot->id = snapshot->connected ? NATIVE_INPUT_PAD_DIGITAL : NATIVE_INPUT_PAD_DISCONNECT;
-	snapshot->buttons = 0xffff;
+	NativeInput_SetSnapshotButtons(snapshot, 0xffff);
 	snapshot->analog[0] = 0x80;
 	snapshot->analog[1] = 0x80;
 	snapshot->analog[2] = 0x80;
 	snapshot->analog[3] = 0x80;
+	memset(snapshot->reserved, 0, sizeof(snapshot->reserved));
 }
 
 static void NativeInput_WritePadData(s32 slot)
 {
 	struct NativeInputController *controller = &s_controllers[slot];
-	struct NativeInputPadSnapshot *snapshot = &controller->snapshot;
+	struct PlatformInputPadSnapshot *snapshot = &controller->snapshot;
 	LPPADRAW pad;
 
 	if (controller->padData == NULL)
@@ -108,12 +134,23 @@ static void NativeInput_WritePadData(s32 slot)
 	pad = (LPPADRAW)controller->padData;
 	pad->status = snapshot->status;
 	pad->id = snapshot->id;
-	pad->buttons[0] = (u8)(snapshot->buttons & 0xff);
-	pad->buttons[1] = (u8)(snapshot->buttons >> 8);
+	pad->buttons[0] = snapshot->buttons[0];
+	pad->buttons[1] = snapshot->buttons[1];
 	pad->analog[0] = snapshot->analog[0];
 	pad->analog[1] = snapshot->analog[1];
 	pad->analog[2] = snapshot->analog[2];
 	pad->analog[3] = snapshot->analog[3];
+}
+
+static void NativeInput_WriteInstalledSnapshots(void)
+{
+	s32 slot;
+
+	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
+	{
+		s_controllers[slot].snapshot = s_installedSnapshots[slot];
+		NativeInput_WritePadData(slot);
+	}
 }
 
 static void NativeInput_DefaultMappings(void)
@@ -204,7 +241,7 @@ static u8 NativeInput_AxisToByte(s32 axis)
 static void NativeInput_ApplyController(s32 slot)
 {
 	struct NativeInputController *nativeController = &s_controllers[slot];
-	struct NativeInputPadSnapshot *snapshot = &nativeController->snapshot;
+	struct PlatformInputPadSnapshot *snapshot = &nativeController->snapshot;
 	const struct NativeInputControllerMapping *mapping = &s_controllerMapping;
 	SDL_GameController *controller = nativeController->controller;
 	u16 buttons = 0xffff;
@@ -261,7 +298,7 @@ static void NativeInput_ApplyController(s32 slot)
 		nativeController->switchingAnalog = 0;
 	}
 
-	snapshot->buttons = buttons;
+	NativeInput_SetSnapshotButtons(snapshot, buttons);
 	snapshot->analog[0] = NativeInput_AxisToByte(NativeInput_ControllerButtonState(controller, mapping->gc_axis_right_x));
 	snapshot->analog[1] = NativeInput_AxisToByte(NativeInput_ControllerButtonState(controller, mapping->gc_axis_right_y));
 	snapshot->analog[2] = NativeInput_AxisToByte(NativeInput_ControllerButtonState(controller, mapping->gc_axis_left_x));
@@ -322,7 +359,8 @@ static s32 NativeInput_KeyboardSuppressed(void)
 
 static void NativeInput_ApplyKeyboard(s32 slot, u16 keyboardButtons)
 {
-	struct NativeInputPadSnapshot *snapshot = &s_controllers[slot].snapshot;
+	struct PlatformInputPadSnapshot *snapshot = &s_controllers[slot].snapshot;
+	u16 buttons;
 
 	if (((s_activeKeyboardControllers & (1 << slot)) == 0) || (keyboardButtons == 0xffff))
 		return;
@@ -330,7 +368,8 @@ static void NativeInput_ApplyKeyboard(s32 slot, u16 keyboardButtons)
 	snapshot->connected = 1;
 	snapshot->status = 0;
 	snapshot->id = NATIVE_INPUT_PAD_DIGITAL;
-	snapshot->buttons &= keyboardButtons;
+	buttons = NativeInput_GetSnapshotButtons(snapshot);
+	NativeInput_SetSnapshotButtons(snapshot, buttons & keyboardButtons);
 }
 
 static s32 NativeInput_FindSlotForDeviceIndex(Sint32 deviceIndex)
@@ -423,10 +462,12 @@ int Platform_InputInit(void)
 		s_controllers[slot].deviceIndex = -1;
 		s_controllers[slot].instanceId = -1;
 		NativeInput_ResetSnapshot(slot);
+		s_installedSnapshots[slot] = s_controllers[slot].snapshot;
 	}
 
 	NativeInput_DefaultMappings();
 	s_activeKeyboardControllers = 0x1;
+	s_installedSnapshotsActive = 0;
 	s_keyboardState = SDL_GetKeyboardState(NULL);
 
 	if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) < 0)
@@ -453,6 +494,7 @@ void Platform_InputShutdown(void)
 		SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC);
 
 	s_inputInitialized = 0;
+	s_installedSnapshotsActive = 0;
 	s_keyboardState = NULL;
 }
 
@@ -463,6 +505,14 @@ void Platform_InputUpdate(void)
 
 	if (s_inputInitialized == 0)
 		return;
+
+	if (s_installedSnapshotsActive != 0)
+	{
+		// NOTE(aalhendi): replay/state installs PSX-shaped pad bytes here;
+		// SDL host state is not serialized.
+		NativeInput_WriteInstalledSnapshots();
+		return;
+	}
 
 	if (g_padCommEnable == 0)
 		return;
@@ -521,7 +571,10 @@ void Platform_InputPadInit(int slot, unsigned char *padData)
 		return;
 
 	s_controllers[slot].padData = padData;
-	NativeInput_ResetSnapshot(slot);
+	if (s_installedSnapshotsActive != 0)
+		s_controllers[slot].snapshot = s_installedSnapshots[slot];
+	else
+		NativeInput_ResetSnapshot(slot);
 	NativeInput_WritePadData(slot);
 }
 
@@ -534,6 +587,110 @@ int Platform_InputPadGetState(int port)
 		return PadStateDiscon;
 
 	return s_controllers[slot].snapshot.connected ? PadStateStable : PadStateDiscon;
+}
+
+int Platform_InputCapturePadSnapshots(struct PlatformInputPadSnapshot *dst, int count)
+{
+	s32 slot;
+
+	if ((dst == NULL) || (count < NATIVE_INPUT_MAX_CONTROLLERS))
+		return 0;
+
+	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
+		dst[slot] = s_controllers[slot].snapshot;
+
+	return NATIVE_INPUT_MAX_CONTROLLERS;
+}
+
+int Platform_InputInstallPadSnapshots(const struct PlatformInputPadSnapshot *src, int count)
+{
+	s32 slot;
+
+	if ((src == NULL) || (count < NATIVE_INPUT_MAX_CONTROLLERS))
+		return 0;
+
+	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
+		s_installedSnapshots[slot] = src[slot];
+
+	s_installedSnapshotsActive = 1;
+	NativeInput_WriteInstalledSnapshots();
+	return NATIVE_INPUT_MAX_CONTROLLERS;
+}
+
+void Platform_InputClearInstalledPadSnapshots(void)
+{
+	s_installedSnapshotsActive = 0;
+}
+
+int Platform_InputGetStateSize(void)
+{
+	return (int)sizeof(struct NativeInputStateSnapshot);
+}
+
+int Platform_InputCaptureState(void *dst, int dstSize)
+{
+	struct NativeInputStateSnapshot *snapshot = (struct NativeInputStateSnapshot *)dst;
+	s32 slot;
+
+	if ((dst == NULL) || (dstSize < (int)sizeof(*snapshot)))
+		return 0;
+
+	memset(snapshot, 0, sizeof(*snapshot));
+	snapshot->magic = NATIVE_INPUT_STATE_MAGIC;
+	snapshot->version = NATIVE_INPUT_STATE_VERSION;
+	snapshot->size = sizeof(*snapshot);
+	snapshot->activeKeyboardControllers = s_activeKeyboardControllers;
+	snapshot->installedSnapshotsActive = s_installedSnapshotsActive;
+
+	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
+	{
+		snapshot->installedSnapshots[slot] = s_installedSnapshots[slot];
+		snapshot->controllers[slot].snapshot = s_controllers[slot].snapshot;
+		snapshot->controllers[slot].analogEnabled = s_controllers[slot].analogEnabled;
+		snapshot->controllers[slot].switchingAnalog = s_controllers[slot].switchingAnalog;
+		snapshot->controllers[slot].controllerToSlotMapping = s_controllerToSlotMapping[slot];
+	}
+
+	return 1;
+}
+
+int Platform_InputRestoreState(const void *src, int srcSize)
+{
+	const struct NativeInputStateSnapshot *snapshot = (const struct NativeInputStateSnapshot *)src;
+	s32 slot;
+
+	if ((src == NULL) || (srcSize < (int)sizeof(*snapshot)))
+		return 0;
+	if ((snapshot->magic != NATIVE_INPUT_STATE_MAGIC) || (snapshot->version != NATIVE_INPUT_STATE_VERSION) || (snapshot->size != sizeof(*snapshot)))
+		return 0;
+	if ((snapshot->activeKeyboardControllers < 0) || (snapshot->activeKeyboardControllers > 3))
+		return 0;
+	if ((snapshot->installedSnapshotsActive < 0) || (snapshot->installedSnapshotsActive > 1))
+		return 0;
+	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
+	{
+		if ((snapshot->controllers[slot].analogEnabled < 0) || (snapshot->controllers[slot].analogEnabled > 1))
+			return 0;
+		if ((snapshot->controllers[slot].switchingAnalog < 0) || (snapshot->controllers[slot].switchingAnalog > 1))
+			return 0;
+		if (snapshot->controllers[slot].controllerToSlotMapping < -1)
+			return 0;
+	}
+
+	s_activeKeyboardControllers = snapshot->activeKeyboardControllers;
+	s_installedSnapshotsActive = snapshot->installedSnapshotsActive != 0;
+
+	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
+	{
+		s_installedSnapshots[slot] = snapshot->installedSnapshots[slot];
+		s_controllers[slot].snapshot = snapshot->controllers[slot].snapshot;
+		s_controllers[slot].analogEnabled = snapshot->controllers[slot].analogEnabled;
+		s_controllers[slot].switchingAnalog = snapshot->controllers[slot].switchingAnalog;
+		s_controllerToSlotMapping[slot] = snapshot->controllers[slot].controllerToSlotMapping;
+		NativeInput_WritePadData(slot);
+	}
+
+	return 1;
 }
 
 void Platform_InputPadVibrate(int port, unsigned char *table, int len)
