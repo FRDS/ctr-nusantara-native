@@ -5,7 +5,6 @@
 #include "PsyX/PsyX_public.h"
 
 #include "gpu/PsyX_GPU.h"
-#include "pad/PsyX_pad.h"
 
 #include "platform.h"
 #include "util/crash_handler.h"
@@ -28,25 +27,12 @@
 #include <pla.h>
 #endif // _WIN32
 
-#ifdef __EMSCRIPTEN__
-int strcasecmp(const char* _l, const char* _r)
-{
-	const u_char* l = (u_char*)_l, * r = (u_char*)_r;
-	for (; *l && *r && (*l == *r || tolower(*l) == tolower(*r)); l++, r++);
-	return tolower(*l) - tolower(*r);
-}
-#elif !defined(_WIN32)
-#include <strings.h>
-#endif
-
 SDL_Window* g_window = NULL;
 int g_swapInterval = 1;
 int g_enableSwapInterval = 1;
 int g_skipSwapInterval = 0;
 
 int							g_cfg_swapInterval = 0;
-PsyXKeyboardMapping			g_cfg_keyboardMapping;
-PsyXControllerMapping		g_cfg_controllerMapping;
 GameOnTextInputHandler		g_cfg_gameOnTextInput = NULL;
 
 GameDebugKeysHandlerFunc	g_dbg_gameDebugKeys = NULL;
@@ -61,10 +47,6 @@ enum EPsxCounters
 };
 
 volatile int g_psxSysCounters[PsxCounter_Num];
-
-extern int	PsyX_Pad_InitSystem();
-extern void PsyX_Pad_Event_ControllerRemoved(Sint32 deviceId);
-extern void PsyX_Pad_Event_ControllerAdded(Sint32 deviceId);
 
 extern int	GR_InitialisePSX();
 extern int	GR_InitialiseRender(char* windowName, int width, int height, int fullscreen);
@@ -102,152 +84,6 @@ int PsyX_Sys_GetVBlankCount()
 static int PsyX_Sys_InitialiseCore()
 {
 	return 1;
-}
-
-static void PsyX_Sys_InitialiseInput()
-{
-	g_cfg_keyboardMapping.kc_square = SDL_SCANCODE_X;
-	g_cfg_keyboardMapping.kc_circle = SDL_SCANCODE_V;
-	g_cfg_keyboardMapping.kc_triangle = SDL_SCANCODE_Z;
-	g_cfg_keyboardMapping.kc_cross = SDL_SCANCODE_C;
-
-	g_cfg_keyboardMapping.kc_l1 = SDL_SCANCODE_LSHIFT;
-	g_cfg_keyboardMapping.kc_l2 = SDL_SCANCODE_LCTRL;
-	g_cfg_keyboardMapping.kc_l3 = SDL_SCANCODE_LEFTBRACKET;
-
-	g_cfg_keyboardMapping.kc_r1 = SDL_SCANCODE_RSHIFT;
-	g_cfg_keyboardMapping.kc_r2 = SDL_SCANCODE_RCTRL;
-	g_cfg_keyboardMapping.kc_r3 = SDL_SCANCODE_RIGHTBRACKET;
-
-	g_cfg_keyboardMapping.kc_dpad_up = SDL_SCANCODE_UP;
-	g_cfg_keyboardMapping.kc_dpad_down = SDL_SCANCODE_DOWN;
-	g_cfg_keyboardMapping.kc_dpad_left = SDL_SCANCODE_LEFT;
-	g_cfg_keyboardMapping.kc_dpad_right = SDL_SCANCODE_RIGHT;
-
-	g_cfg_keyboardMapping.kc_select = SDL_SCANCODE_SPACE;
-	g_cfg_keyboardMapping.kc_start = SDL_SCANCODE_RETURN;
-
-	//----------------
-	g_cfg_controllerMapping.gc_square = SDL_CONTROLLER_BUTTON_X;
-	g_cfg_controllerMapping.gc_circle = SDL_CONTROLLER_BUTTON_B;
-	g_cfg_controllerMapping.gc_triangle = SDL_CONTROLLER_BUTTON_Y;
-	g_cfg_controllerMapping.gc_cross = SDL_CONTROLLER_BUTTON_A;
-
-	g_cfg_controllerMapping.gc_l1 = SDL_CONTROLLER_BUTTON_LEFTSHOULDER;
-	g_cfg_controllerMapping.gc_l2 = SDL_CONTROLLER_AXIS_TRIGGERLEFT | CONTROLLER_MAP_FLAG_AXIS;
-	g_cfg_controllerMapping.gc_l3 = SDL_CONTROLLER_BUTTON_LEFTSTICK;
-
-	g_cfg_controllerMapping.gc_r1 = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER;
-	g_cfg_controllerMapping.gc_r2 = SDL_CONTROLLER_AXIS_TRIGGERRIGHT | CONTROLLER_MAP_FLAG_AXIS;
-	g_cfg_controllerMapping.gc_r3 = SDL_CONTROLLER_BUTTON_RIGHTSTICK;
-
-	g_cfg_controllerMapping.gc_dpad_up = SDL_CONTROLLER_BUTTON_DPAD_UP;
-	g_cfg_controllerMapping.gc_dpad_down = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
-	g_cfg_controllerMapping.gc_dpad_left = SDL_CONTROLLER_BUTTON_DPAD_LEFT;
-	g_cfg_controllerMapping.gc_dpad_right = SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
-
-	g_cfg_controllerMapping.gc_select = SDL_CONTROLLER_BUTTON_BACK;
-	g_cfg_controllerMapping.gc_start = SDL_CONTROLLER_BUTTON_START;
-
-	g_cfg_controllerMapping.gc_axis_left_x = SDL_CONTROLLER_AXIS_LEFTX | CONTROLLER_MAP_FLAG_AXIS;
-	g_cfg_controllerMapping.gc_axis_left_y = SDL_CONTROLLER_AXIS_LEFTY | CONTROLLER_MAP_FLAG_AXIS;
-	g_cfg_controllerMapping.gc_axis_right_x = SDL_CONTROLLER_AXIS_RIGHTX | CONTROLLER_MAP_FLAG_AXIS;
-	g_cfg_controllerMapping.gc_axis_right_y = SDL_CONTROLLER_AXIS_RIGHTY | CONTROLLER_MAP_FLAG_AXIS;
-
-	PsyX_Pad_InitSystem();
-}
-
-#ifdef __GNUC__
-// should be strcasecmp, but this one never existed in C's std, and all the usage-cases don't seem to fail on Linux/Mingw.
-#define _stricmp(s1, s2) strcmp(s1, s2)
-#endif
-
-// Keyboard mapping lookup
-int PsyX_LookupKeyboardMapping(const char* str, int default_value)
-{
-	const char* scancodeName;
-	int i;
-
-	if (str)
-	{
-		if (!_stricmp("NONE", str))
-			return SDL_SCANCODE_UNKNOWN;
-
-		for (i = 0; i < SDL_NUM_SCANCODES; i++)
-		{
-			scancodeName = SDL_GetScancodeName((SDL_Scancode)i);
-
-			if (strlen(scancodeName) && !_stricmp(scancodeName, str))
-			{
-				return i;
-			}
-		}
-	}
-
-	return default_value;
-}
-
-// Game controller mapping lookup
-// Available controller binds(refer to SDL2 game controller)
-//
-// Axes:
-//	leftx lefty
-//	rightx righty
-//	lefttrigger righttrigger
-//
-// NOTE: adding `-` before axis names makes it inverse, so `-leftx` inverse left stick X axis
-//
-// Buttons:
-// 	a, b, x, y
-// 	back guide start
-// 	leftstick rightstick
-// 	leftshoulder rightshoulder
-// 	dpup dpdown dpleft dpright
-
-int PsyX_LookupGameControllerMapping(const char* str, int default_value)
-{
-	const char* axisStr;
-	const char* buttonOrAxisName;
-	int i, axisFlags;
-
-	if (str)
-	{
-		axisFlags = CONTROLLER_MAP_FLAG_AXIS;
-		axisStr = str;
-
-		if (*axisStr == '-')
-		{
-			axisFlags |= CONTROLLER_MAP_FLAG_INVERSE;
-			axisStr++;
-		}
-
-		if (!_stricmp("NONE", str))
-			return SDL_CONTROLLER_BUTTON_INVALID;
-
-		// check buttons
-		for (i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++)
-		{
-			buttonOrAxisName = SDL_GameControllerGetStringForButton((SDL_GameControllerButton)i);
-
-			if (strlen(buttonOrAxisName) && !_stricmp(buttonOrAxisName, str))
-			{
-				return i;
-			}
-		}
-
-		// Check axes
-		for (i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++)
-		{
-			buttonOrAxisName = SDL_GameControllerGetStringForAxis((SDL_GameControllerAxis)i);
-
-			if (strlen(buttonOrAxisName) && !_stricmp(buttonOrAxisName, axisStr))
-			{
-				return i | axisFlags;
-			}
-		}
-	}
-
-	return default_value;
 }
 
 char* g_appNameStr = NULL;
@@ -541,8 +377,6 @@ void PsyX_Initialise(char* appName, int width, int height, int fullscreen)
 		return;
 	}
 
-	PsyX_Sys_InitialiseInput();
-
 	// set shutdown function (PSX apps usualy don't exit)
 	atexit(PsyX_Shutdown);
 
@@ -560,102 +394,43 @@ void PsyX_SetCursorPosition(int x, int y)
 	SDL_WarpMouseInWindow(g_window, x, y);
 }
 
-void PsyX_Sys_DoDebugKeys(int nKey, char down); // forward decl
-void PsyX_Sys_DoDebugMouseMotion(int x, int y);
-
-void PsyX_Exit();
-
-int g_activeKeyboardControllers = 0x1;
-int g_altKeyState = 0;
-
-void PsyX_Sys_DoPollEvent()
+void PsyX_RequestExit(void)
 {
-	SDL_Event event;
-	while (SDL_PollEvent(&event))
-	{
-		switch (event.type)
-		{
-			case SDL_CONTROLLERDEVICEADDED:
-				PsyX_Pad_Event_ControllerAdded(event.cdevice.which);
-				break;
-			case SDL_CONTROLLERDEVICEREMOVED:
-				PsyX_Pad_Event_ControllerRemoved(event.cdevice.which);
-				break;
-			case SDL_QUIT:
-				PsyX_Exit();
-				break;
-			case SDL_WINDOWEVENT:
-				switch (event.window.event)
-				{
-				case SDL_WINDOWEVENT_RESIZED:
-					g_windowWidth = event.window.data1;
-					g_windowHeight = event.window.data2;
-					GR_ResetDevice();
-					break;
-				case SDL_WINDOWEVENT_CLOSE:
-					PsyX_Exit();
-					break;
-				}
-				break;
-			case SDL_MOUSEMOTION:
+	exit(0);
+}
 
-				PsyX_Sys_DoDebugMouseMotion(event.motion.x, event.motion.y);
-				break;
-			case SDL_KEYDOWN:
-			case SDL_KEYUP:
-			{
-				int nKey = event.key.keysym.scancode;
+void PsyX_HandleHostWindowResize(int width, int height)
+{
+	g_windowWidth = width;
+	g_windowHeight = height;
+	GR_ResetDevice();
+}
 
-				if (nKey == SDL_SCANCODE_RALT)
-				{
-					g_altKeyState = (event.type == SDL_KEYDOWN);
-				}
-				else if (nKey == SDL_SCANCODE_RETURN)
-				{
-					if (g_altKeyState && event.type == SDL_KEYDOWN)
-					{
-						int fullscreen = SDL_GetWindowFlags(g_window) & SDL_WINDOW_FULLSCREEN > 0;
+void PsyX_HandleHostFullscreenToggle(void)
+{
+	int fullscreen = (SDL_GetWindowFlags(g_window) & SDL_WINDOW_FULLSCREEN) != 0;
 
-						SDL_SetWindowFullscreen(g_window, fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
+	SDL_SetWindowFullscreen(g_window, fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
+	SDL_GetWindowSize(g_window, &g_windowWidth, &g_windowHeight);
+	GR_ResetDevice();
+}
 
-						SDL_GetWindowSize(g_window, &g_windowWidth, &g_windowHeight);
-						GR_ResetDevice();
-					}
-					break;
-				}
+void PsyX_HandleHostMouseMotion(int x, int y)
+{
+	if (g_dbg_gameDebugMouse)
+		g_dbg_gameDebugMouse(x, y);
+}
 
-				// lshift/right shift
-				if (nKey == SDL_SCANCODE_RSHIFT)
-					nKey = SDL_SCANCODE_LSHIFT;
-				else if (nKey == SDL_SCANCODE_RCTRL)
-					nKey = SDL_SCANCODE_LCTRL;
-				else if (nKey == SDL_SCANCODE_RALT)
-					nKey = SDL_SCANCODE_LALT;
-
-				if (g_cfg_gameOnTextInput && nKey == SDL_SCANCODE_BACKSPACE && event.type == SDL_KEYDOWN)
-				{
-					(g_cfg_gameOnTextInput)(NULL);
-				}
-
-				PsyX_Sys_DoDebugKeys(nKey, (event.type == SDL_KEYUP) ? 0 : 1);
-				break;
-			}
-			case SDL_TEXTINPUT:
-			{
-				if(g_cfg_gameOnTextInput)
-					(g_cfg_gameOnTextInput)(event.text.text);
-				break;
-			}			
-		}
-	}
+void PsyX_HandleHostTextInput(const char *text)
+{
+	if (g_cfg_gameOnTextInput)
+		g_cfg_gameOnTextInput(text);
 }
 
 char begin_scene_flag = 0;
 
 char PsyX_BeginScene()
 {
-	PsyX_Sys_DoPollEvent();
-
 	if (begin_scene_flag)
 		return 0;
 
@@ -747,13 +522,7 @@ void PsyX_TakeScreenshot()
 }
 #endif
 
-void PsyX_Sys_DoDebugMouseMotion(int x, int y)
-{
-	if (g_dbg_gameDebugMouse)
-		g_dbg_gameDebugMouse(x, y);
-}
-
-void PsyX_Sys_DoDebugKeys(int nKey, char down)
+void PsyX_HandleHostKey(int nKey, char down)
 {
 	if (g_dbg_gameDebugKeys)
 		g_dbg_gameDebugKeys(nKey, down);
@@ -804,16 +573,6 @@ void PsyX_Sys_DoDebugKeys(int nKey, char down)
 			g_cfg_bilinearFiltering ^= 1;
 			eprintwarn("filtering mode: %d\n", g_cfg_bilinearFiltering);
 			break;
-		case SDL_SCANCODE_F4:
-
-			g_activeKeyboardControllers++;
-			g_activeKeyboardControllers = g_activeKeyboardControllers % 4;
-
-			if (g_activeKeyboardControllers == 0)
-				g_activeKeyboardControllers++;
-
-			eprintwarn("Active keyboard controller: %d\n", g_activeKeyboardControllers);
-			break;
 		case SDL_SCANCODE_F5:
 			g_cfg_pgxpTextureCorrection ^= 1;
 			break;
@@ -822,15 +581,6 @@ void PsyX_Sys_DoDebugKeys(int nKey, char down)
 			break;
 		}
 	}
-}
-
-void PsyX_UpdateInput()
-{
-	// also poll events here
-	PsyX_Sys_DoPollEvent();
-
-	if(!g_altKeyState)
-		PsyX_Pad_InternalPadUpdates();
 }
 
 uint PsyX_CalcFPS()
@@ -887,11 +637,6 @@ void PsyX_WaitForTimestep(int count)
 
 		swapLastVbl = PsyX_Sys_GetVBlankCount();
 	}
-}
-
-void PsyX_Exit()
-{
-	exit(0);
 }
 
 void PsyX_Shutdown()

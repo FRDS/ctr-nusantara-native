@@ -42,10 +42,12 @@ __declspec(dllimport) unsigned long __stdcall GetLastError(void);
 #include "PsyX/PsyX_globals.h"
 #include "PsyX/PsyX_render.h"
 #include "ctr_scratchpad.h"
+#include "platform/native_input.h"
 
 #define CTR_NATIVE_RCNT1_HZ 15720u
 
 static Uint64 s_rootCounterBase = 0;
+static int s_hostAltKeyState = 0;
 
 static int Native_GetRCnt(int spec)
 {
@@ -291,8 +293,6 @@ int main(int argc, char *argv[])
 	PsyX_SetSwapInterval(0);
 	PsyX_EnableSwapInterval(0);
 
-	g_cfg_controllerToSlotMapping[0] = 0;
-
 	g_dbg_gameDebugKeys = PsyXKeyboardHandler;
 
 	int result = CTR_Main();
@@ -305,10 +305,12 @@ void Platform_Init(const char *title, int width, int height)
 {
 	g_cfg_swapInterval = 1;
 	PsyX_Initialise(title, width, height, 0);
+	Platform_InputInit();
 }
 
 void Platform_Shutdown(void)
 {
+	Platform_InputShutdown();
 }
 
 void Platform_BeginFrame(void)
@@ -333,8 +335,84 @@ void Platform_PresentVRAMDisplay(void)
 	Platform_EndFrame();
 }
 
+void Platform_PollHostEvents(void)
+{
+	SDL_Event event;
+
+	while (SDL_PollEvent(&event))
+	{
+		switch (event.type)
+		{
+		case SDL_CONTROLLERDEVICEADDED:
+			Platform_InputControllerAdded(event.cdevice.which);
+			break;
+		case SDL_CONTROLLERDEVICEREMOVED:
+			Platform_InputControllerRemoved(event.cdevice.which);
+			break;
+		case SDL_QUIT:
+			PsyX_RequestExit();
+			break;
+		case SDL_WINDOWEVENT:
+			switch (event.window.event)
+			{
+			case SDL_WINDOWEVENT_RESIZED:
+				PsyX_HandleHostWindowResize(event.window.data1, event.window.data2);
+				break;
+			case SDL_WINDOWEVENT_CLOSE:
+				PsyX_RequestExit();
+				break;
+			}
+			break;
+		case SDL_MOUSEMOTION:
+			PsyX_HandleHostMouseMotion(event.motion.x, event.motion.y);
+			break;
+		case SDL_KEYDOWN:
+		case SDL_KEYUP:
+		{
+			int key = event.key.keysym.scancode;
+			char down = (event.type == SDL_KEYUP) ? 0 : 1;
+
+			if (key == SDL_SCANCODE_RALT)
+			{
+				s_hostAltKeyState = down;
+			}
+			else if (key == SDL_SCANCODE_RETURN)
+			{
+				if ((s_hostAltKeyState != 0) && (down != 0))
+					PsyX_HandleHostFullscreenToggle();
+				break;
+			}
+
+			if (key == SDL_SCANCODE_RSHIFT)
+				key = SDL_SCANCODE_LSHIFT;
+			else if (key == SDL_SCANCODE_RCTRL)
+				key = SDL_SCANCODE_LCTRL;
+			else if (key == SDL_SCANCODE_RALT)
+				key = SDL_SCANCODE_LALT;
+
+			if ((key == SDL_SCANCODE_BACKSPACE) && (down != 0))
+				PsyX_HandleHostTextInput(NULL);
+
+			if ((key == SDL_SCANCODE_F4) && (down == 0))
+			{
+				PsyX_Log_Warning("[Psy-X] Active keyboard controller: %d\n", Platform_InputCycleKeyboardController());
+				break;
+			}
+
+			PsyX_HandleHostKey(key, down);
+			break;
+		}
+		case SDL_TEXTINPUT:
+			PsyX_HandleHostTextInput(event.text.text);
+			break;
+		}
+	}
+}
+
 int Platform_PollInput(void)
 {
+	Platform_PollHostEvents();
+	Platform_InputUpdate();
 	return 1;
 }
 

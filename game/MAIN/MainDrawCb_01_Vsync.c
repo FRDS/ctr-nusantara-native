@@ -30,7 +30,9 @@ void MainDrawCb_Vsync()
 	}
 
 #ifdef CTR_NATIVE
-	PsyX_UpdateInput();
+	// NOTE(aalhendi): Native owns host input and writes PSX-shaped pad
+	// snapshots before retail GAMEPAD_PollVsync consumes them.
+	Platform_PollInput();
 #endif
 
 	GAMEPAD_PollVsync(sdata->gGamepads);

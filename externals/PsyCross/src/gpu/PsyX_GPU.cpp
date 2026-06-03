@@ -10,6 +10,8 @@
 #include <math.h>
 #include <string.h>
 
+extern "C" void Platform_PollHostEvents(void);
+
 #define GET_TPAGE_BLEND(tpage)  ((BlendMode)(((tpage >> 5) & 3) + 1))
 
 #define GET_TPAGE_DITHER(tpage) ((tpage >> 9) & 0x1)
@@ -842,7 +844,7 @@ void DrawAllSplits()
 			eprintf("==========================================\n");
 		}
 
-		PsyX_UpdateInput();
+		Platform_PollHostEvents();
 	}
 #endif // _DEBUG
 

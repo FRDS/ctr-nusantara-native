@@ -19,6 +19,8 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER)
 set(GAME_SOURCES
     ctr_native.c
     platform/native_audio.c
+    platform/native_input.c
+    platform/native_libpad.c
     platform/native_memcard.c
 )
 
@@ -47,7 +49,6 @@ set(PSYCROSS_C
     externals/PsyCross/src/psx/LIBETC.C
     externals/PsyCross/src/psx/LIBGPU.C
     externals/PsyCross/src/psx/LIBGTE.C
-    externals/PsyCross/src/psx/LIBPAD.C
     externals/PsyCross/src/psx/LIBSN.C
     externals/PsyCross/src/psx/LIBSPU.C
     externals/PsyCross/src/render/glad.c
@@ -56,7 +57,6 @@ set(PSYCROSS_CPP
     externals/PsyCross/src/PsyX_main.cpp
     externals/PsyCross/src/gpu/PsyX_GPU.cpp
     externals/PsyCross/src/gte/PsyX_GTE.cpp
-    externals/PsyCross/src/pad/PsyX_pad.cpp
     externals/PsyCross/src/render/PsyX_render.cpp
     externals/PsyCross/src/util/crash_handler.cpp
 )

@@ -12,7 +12,6 @@ extern "C" {
 
 extern unsigned int g_swapTime;
 extern int g_vmode;
-extern int g_activeKeyboardControllers;
 
 extern int PsyX_Sys_GetVBlankCount();
 extern int PsyX_Sys_SetVMode(int mode);
