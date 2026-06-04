@@ -24,6 +24,10 @@ CTR Native contains project-owned derivatives of these PsyCross source files:
 - `platform/native_inline_c.c` from `externals/PsyCross/src/psx/INLINE_C.C`
 - `platform/native_libapi.c` from `externals/PsyCross/src/psx/LIBAPI.C`
 - `platform/native_libetc.c` from `externals/PsyCross/src/psx/LIBETC.C`
+- `platform/native_libgte.c`, `platform/native_gte_rcossin_tbl.h`,
+  `platform/native_gte_ratan_tbl.h`, and `platform/native_gte_sqrt_tbl.h` from
+  `externals/PsyCross/src/psx/LIBGTE.C` and
+  `externals/PsyCross/src/gte/*_tbl.h`
 - `platform/native_libgpu.c` from `externals/PsyCross/src/psx/LIBGPU.C`
 - `platform/native_psyx_shell.c` from
   `externals/PsyCross/src/PsyX_main.cpp`

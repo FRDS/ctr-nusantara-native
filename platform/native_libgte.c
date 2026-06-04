@@ -1,39 +1,47 @@
-#include "psx/libgte.h"
-#include "psx/inline_c.h"
-#include "psx/gtemac.h"
-#include "psx/gtereg.h"
+/*
+ * Derived from REDRIVER2/PsyCross MIT source:
+ * externals/PsyCross/src/psx/LIBGTE.C
+ * See THIRD_PARTY_NOTICES.md for copyright and license details.
+ */
 
-#include <stdio.h>
+#include <macros.h>
+#include <psx/gtemac.h>
+#include <psx/gtereg.h>
+#include <psx/inline_c.h>
+#include <psx/libgte.h>
+
 #include <assert.h>
+#include <stdio.h>
 
-#include "../gte/PsyX_GTE.h"
-#include "../gte/rcossin_tbl.h"
-#include "../gte/ratan_tbl.h"
-#include "../gte/sqrt_tbl.h"
+#include "native_gte_rcossin_tbl.h"
+#include "native_gte_ratan_tbl.h"
+#include "native_gte_sqrt_tbl.h"
 
-#define ONE_BITS			12
-#define ONE					(1 << 12)
-#define	FIXED(a)			((a) >> 12)
+extern u32 gte_leadingzerocount(u32 lzcs);
+
+#define ONE_BITS 12
+#define ONE      (1 << 12)
+#define FIXED(a) ((a) >> 12)
 
 #ifndef MIN
-#define MIN(a,b)	fst_min(a,b)
+#define MIN(a, b) fst_min(a, b)
 #endif
 
 #ifndef MAX
-#define MAX(a,b)	fst_max(a,b)
+#define MAX(a, b) fst_max(a, b)
 #endif
 
-inline int fst_min(int a, int b)
+static inline s32 fst_min(s32 a, s32 b)
 {
-	int diff = a - b;
-	int dsgn = diff >> 31;
+	s32 diff = a - b;
+	s32 dsgn = diff >> 31;
 	return b + (diff & dsgn);
 }
 
-inline int fst_max(int a, int b)
+static inline s32 fst_max(s32 a, s32 b)
 {
-	int diff = a - b;
-	int dsgn = diff >> 31;
+	s32 diff = a - b;
+	s32 dsgn = diff >> 31;
 	return a - (diff & dsgn);
 }
 
@@ -59,36 +67,36 @@ void SetGeomScreen(int h)
 	C2_H = h;
 }
 
-void SetRotMatrix(MATRIX* m)
+void SetRotMatrix(MATRIX *m)
 {
 	gte_SetRotMatrix(m);
 }
 
-void SetLightMatrix(MATRIX* m)
+void SetLightMatrix(MATRIX *m)
 {
 	gte_SetLightMatrix(m);
 }
 
-void SetColorMatrix(MATRIX* m)
+void SetColorMatrix(MATRIX *m)
 {
 	gte_SetColorMatrix(m);
 }
 
-void SetTransMatrix(MATRIX* m)
+void SetTransMatrix(MATRIX *m)
 {
 	gte_SetTransMatrix(m);
 }
 
 #define MAX_NUM_MATRICES 20
-int matrixLevel = 0;
-MATRIX stack[MAX_NUM_MATRICES];//unk_410
-MATRIX* currentMatrix = &stack[0];//unk_40C
+s32 matrixLevel = 0;
+MATRIX stack[MAX_NUM_MATRICES];    // unk_410
+MATRIX *currentMatrix = &stack[0]; // unk_40C
 
 void PushMatrix()
 {
 	if (matrixLevel < 20)
 	{
-		MATRIX* m = &stack[matrixLevel];//$t7
+		MATRIX *m = &stack[matrixLevel]; //$t7
 
 		gte_ReadRotMatrix(m);
 		gte_sttr(m->t);
@@ -108,7 +116,7 @@ void PopMatrix()
 	{
 		currentMatrix--;
 		matrixLevel--;
-		MATRIX* m = &stack[matrixLevel];//$t7
+		MATRIX *m = &stack[matrixLevel]; //$t7
 
 		gte_SetRotMatrix(m);
 		gte_SetTransMatrix(m);
@@ -119,12 +127,12 @@ void PopMatrix()
 	}
 }
 
-void RotTrans(SVECTOR* v0, VECTOR* v1, long* flag)
+void RotTrans(SVECTOR *v0, VECTOR *v1, long *flag)
 {
 	gte_RotTrans(v0, v1, flag);
 }
 
-void RotTransSV(SVECTOR* v0, SVECTOR* v1, long* flag)
+void RotTransSV(SVECTOR *v0, SVECTOR *v1, long *flag)
 {
 	gte_ldv0(v0);
 	gte_rt();
@@ -132,7 +140,7 @@ void RotTransSV(SVECTOR* v0, SVECTOR* v1, long* flag)
 	gte_stflg(flag);
 }
 
-int RotTransPers(SVECTOR* v0, long* sxy, long* p, long* flag)
+int RotTransPers(SVECTOR *v0, long *sxy, long *p, long *flag)
 {
 	int sz;
 	gte_RotTransPers(v0, sxy, p, flag, &sz);
@@ -140,7 +148,7 @@ int RotTransPers(SVECTOR* v0, long* sxy, long* p, long* flag)
 	return sz;
 }
 
-int RotTransPers3(SVECTOR* v0, SVECTOR* v1, SVECTOR* v2, long* sxy0, long* sxy1, long* sxy2, long* p, long* flag)
+int RotTransPers3(SVECTOR *v0, SVECTOR *v1, SVECTOR *v2, long *sxy0, long *sxy1, long *sxy2, long *p, long *flag)
 {
 	int sz;
 	gte_RotTransPers3(v0, v1, v2, sxy0, sxy1, sxy2, p, flag, &sz);
@@ -148,7 +156,7 @@ int RotTransPers3(SVECTOR* v0, SVECTOR* v1, SVECTOR* v2, long* sxy0, long* sxy1,
 	return sz;
 }
 
-int RotTransPers4(SVECTOR* v0, SVECTOR* v1, SVECTOR* v2, SVECTOR* v3, long* sxy0, long* sxy1, long* sxy2, long* sxy3, long* p, long* flag)
+int RotTransPers4(SVECTOR *v0, SVECTOR *v1, SVECTOR *v2, SVECTOR *v3, long *sxy0, long *sxy1, long *sxy2, long *sxy3, long *p, long *flag)
 {
 	int _flag;
 	int sz;
@@ -173,42 +181,42 @@ int RotTransPers4(SVECTOR* v0, SVECTOR* v1, SVECTOR* v2, SVECTOR* v3, long* sxy0
 	return sz;
 }
 
-void NormalColor(SVECTOR* v0, CVECTOR* v1)
+void NormalColor(SVECTOR *v0, CVECTOR *v1)
 {
 	gte_NormalColor(v0, v1);
 }
 
-void NormalColor3(SVECTOR* v0, SVECTOR* v1, SVECTOR* v2, CVECTOR* v3, CVECTOR* v4, CVECTOR* v5)
+void NormalColor3(SVECTOR *v0, SVECTOR *v1, SVECTOR *v2, CVECTOR *v3, CVECTOR *v4, CVECTOR *v5)
 {
 	gte_NormalColor3(v0, v1, v2, v3, v4, v5);
 }
 
-void NormalColorDpq(SVECTOR* v0, CVECTOR* v1, int p, CVECTOR* v2)
+void NormalColorDpq(SVECTOR *v0, CVECTOR *v1, int p, CVECTOR *v2)
 {
 	gte_NormalColorDpq(v0, v1, p, v2);
 }
 
-void NormalColorCol(SVECTOR* v0, CVECTOR* v1, CVECTOR* v2)
+void NormalColorCol(SVECTOR *v0, CVECTOR *v1, CVECTOR *v2)
 {
 	gte_NormalColorCol(v0, v1, v2);
 }
 
-void NormalColorCol3(SVECTOR* v0, SVECTOR* v1, SVECTOR* v2, CVECTOR* v3, CVECTOR* v4, CVECTOR* v5, CVECTOR* v6)
+void NormalColorCol3(SVECTOR *v0, SVECTOR *v1, SVECTOR *v2, CVECTOR *v3, CVECTOR *v4, CVECTOR *v5, CVECTOR *v6)
 {
-	gte_NormalColorCol3(v0,v1,v2,v3,v4,v5,v6);
+	gte_NormalColorCol3(v0, v1, v2, v3, v4, v5, v6);
 }
 
-void DpqColor(CVECTOR* v0, int p, CVECTOR* v1)
+void DpqColor(CVECTOR *v0, int p, CVECTOR *v1)
 {
 	gte_DpqColor(v0, &p, v1);
 }
 
-void ColorDpq(VECTOR* v0, CVECTOR* v1, int p, CVECTOR* v2)
+void ColorDpq(VECTOR *v0, CVECTOR *v1, int p, CVECTOR *v2)
 {
 	gte_ColorDpq(v0, v1, p, v2);
 }
 
-void ColorCol(VECTOR* v0, CVECTOR* v1, CVECTOR* v2)
+void ColorCol(VECTOR *v0, CVECTOR *v1, CVECTOR *v2)
 {
 	gte_ColorCol(v0, v1, v2);
 }
@@ -218,16 +226,16 @@ int NormalClip(int sxy0, int sxy1, int sxy2)
 	int opz;
 
 	gte_NormalClip(&sxy0, &sxy1, &sxy2, &opz);
-	
+
 	return opz;
 }
 
-void LocalLight(SVECTOR* v0, VECTOR* v1)
+void LocalLight(SVECTOR *v0, VECTOR *v1)
 {
 	gte_LocalLight(v0, v1);
 }
 
-int RotAverageNclip4(SVECTOR* v0, SVECTOR* v1, SVECTOR* v2, SVECTOR* v3, long* sxy0, long* sxy1, long* sxy2, long* sxy3, long* p, long* otz, long* flag)
+int RotAverageNclip4(SVECTOR *v0, SVECTOR *v1, SVECTOR *v2, SVECTOR *v3, long *sxy0, long *sxy1, long *sxy2, long *sxy3, long *p, long *otz, long *flag)
 {
 	gte_ldv3(v0, v1, v2);
 	gte_rtpt();
@@ -258,9 +266,8 @@ int RotAverageNclip4(SVECTOR* v0, SVECTOR* v1, SVECTOR* v2, SVECTOR* v3, long* s
 	return opz;
 }
 
-MATRIX* MulMatrix0(MATRIX* m0, MATRIX* m1, MATRIX* m2)
+MATRIX *MulMatrix0(MATRIX *m0, MATRIX *m1, MATRIX *m2)
 {
-#if 1
 	// correct Psy-Q implementation
 	SVECTOR v0, r0, r1, r2;
 
@@ -302,39 +309,11 @@ MATRIX* MulMatrix0(MATRIX* m0, MATRIX* m1, MATRIX* m2)
 	m2->m[2][1] = r1.vz;
 	m2->m[2][2] = r2.vz;
 
-#else
-	/* これでもm0==m2の時ヤバイ */
-	int vx, vy, vz;
-	MATRIX tmp;
-	/* のでm0をtmpにコピー */
-	if (m0 == m2) {
-		tmp = *m0; m0 = &tmp;
-	}
-
-	vx = m1->m[0][0];
-	vy = m1->m[1][0];
-	vz = m1->m[2][0];
-	m2->m[0][0] = FIXED(m0->m[0][0] * vx + m0->m[0][1] * vy + m0->m[0][2] * vz);
-	m2->m[1][0] = FIXED(m0->m[1][0] * vx + m0->m[1][1] * vy + m0->m[1][2] * vz);
-	m2->m[2][0] = FIXED(m0->m[2][0] * vx + m0->m[2][1] * vy + m0->m[2][2] * vz);
-	vx = m1->m[0][1];
-	vy = m1->m[1][1];
-	vz = m1->m[2][1];
-	m2->m[0][1] = FIXED(m0->m[0][0] * vx + m0->m[0][1] * vy + m0->m[0][2] * vz);
-	m2->m[1][1] = FIXED(m0->m[1][0] * vx + m0->m[1][1] * vy + m0->m[1][2] * vz);
-	m2->m[2][1] = FIXED(m0->m[2][0] * vx + m0->m[2][1] * vy + m0->m[2][2] * vz);
-	vx = m1->m[0][2];
-	vy = m1->m[1][2];
-	vz = m1->m[2][2];
-	m2->m[0][2] = FIXED(m0->m[0][0] * vx + m0->m[0][1] * vy + m0->m[0][2] * vz);
-	m2->m[1][2] = FIXED(m0->m[1][0] * vx + m0->m[1][1] * vy + m0->m[1][2] * vz);
-	m2->m[2][2] = FIXED(m0->m[2][0] * vx + m0->m[2][1] * vy + m0->m[2][2] * vz);
-#endif
 
 	return m2;
 }
 
-MATRIX* MulMatrix(MATRIX* m0, MATRIX* m1)
+MATRIX *MulMatrix(MATRIX *m0, MATRIX *m1)
 {
 	MATRIX tmp;
 	gte_MulMatrix0(m0, m1, &tmp);
@@ -344,7 +323,7 @@ MATRIX* MulMatrix(MATRIX* m0, MATRIX* m1)
 	return m0;
 }
 
-MATRIX* MulMatrix2(MATRIX* m0, MATRIX* m1)
+MATRIX *MulMatrix2(MATRIX *m0, MATRIX *m1)
 {
 	// Same as MulMatrix but result goes to m1
 	MATRIX tmp;
@@ -355,10 +334,9 @@ MATRIX* MulMatrix2(MATRIX* m0, MATRIX* m1)
 	return m1;
 }
 
-MATRIX* MulRotMatrix(MATRIX* m0)
+MATRIX *MulRotMatrix(MATRIX *m0)
 {
-	// FIXME: might be wrong
-	// as RTV0 can be insufficient
+	// TODO(aalhendi): Verify against PsyQ behavior; RTV0 may be insufficient.
 	gte_ldv0(&m0->m[0]);
 	gte_rtv0();
 	gte_stsv(&m0->m[0]);
@@ -376,7 +354,7 @@ MATRIX* MulRotMatrix(MATRIX* m0)
 
 void SetBackColor(int rbk, int gbk, int bbk)
 {
-	gte_SetBackColor(rbk,gbk,bbk);
+	gte_SetBackColor(rbk, gbk, bbk);
 }
 
 void SetFarColor(int rfc, int gfc, int bfc)
@@ -384,51 +362,25 @@ void SetFarColor(int rfc, int gfc, int bfc)
 	gte_SetFarColor(rfc, gfc, bfc);
 }
 
-#define	APPLYMATRIX(m,v0,v1)	{\
-	int vx = v0->vx;\
-	int vy = v0->vy;\
-	int vz = v0->vz;\
-	v1->vx = FIXED(m->m[0][0]*vx + m->m[0][1]*vy + m->m[0][2]*vz );\
-	v1->vy = FIXED(m->m[1][0]*vx + m->m[1][1]*vy + m->m[1][2]*vz );\
-	v1->vz = FIXED(m->m[2][0]*vx + m->m[2][1]*vy + m->m[2][2]*vz );\
-}
-
-VECTOR* ApplyMatrix(MATRIX* m, SVECTOR* v0, VECTOR* v1)
+VECTOR *ApplyMatrix(MATRIX *m, SVECTOR *v0, VECTOR *v1)
 {
-#if 1
-	// correct Psy-Q implementation
 	gte_SetRotMatrix(m);
 	gte_ldv0(v0);
 	gte_rtv0();
 	gte_stlvnl(v1);
-#else
-	APPLYMATRIX(m, v0, v1);
-#endif
 	return v1;
 }
 
-VECTOR* ApplyRotMatrix(SVECTOR* v0, VECTOR* v1)
+VECTOR *ApplyRotMatrix(SVECTOR *v0, VECTOR *v1)
 {
-#if 1
-	// correct Psy-Q implementation
 	gte_ldv0(v0);
 	gte_rtv0();
 	gte_stlvnl(v1);
-#else
-	MATRIX temp;
-	gte_ReadRotMatrix(&temp);
-
-	MATRIX* m = &temp;
-
-	APPLYMATRIX(m, v0, v1);
-#endif
 	return v1;
 }
 
-VECTOR* ApplyRotMatrixLV(VECTOR* v0, VECTOR* v1)
+VECTOR *ApplyRotMatrixLV(VECTOR *v0, VECTOR *v1)
 {
-#if 1
-	// correct Psy-Q implementation
 	VECTOR tmpHI;
 	VECTOR tmpLO;
 
@@ -496,35 +448,20 @@ VECTOR* ApplyRotMatrixLV(VECTOR* v0, VECTOR* v1)
 	v1->vx = tmpHI.vx + tmpLO.vx;
 	v1->vy = tmpHI.vy + tmpLO.vy;
 	v1->vz = tmpHI.vz + tmpLO.vz;
-#else
-	MATRIX temp;
-	gte_ReadRotMatrix(&temp);
-
-	MATRIX* m = &temp;
-
-	APPLYMATRIX(m, v0, v1);
-#endif
 	return v1;
 }
 
-SVECTOR* ApplyMatrixSV(MATRIX* m, SVECTOR* v0, SVECTOR* v1)
+SVECTOR *ApplyMatrixSV(MATRIX *m, SVECTOR *v0, SVECTOR *v1)
 {
-#if 1
-	// correct Psy-Q implementation
 	gte_SetRotMatrix(m);
 	gte_ldv0(v0);
 	gte_rtv0();
 	gte_stsv(v1);
-#else
-	APPLYMATRIX(m, v0, v1);
-#endif
 	return v1;
 }
 
-VECTOR* ApplyMatrixLV(MATRIX* m, VECTOR* v0, VECTOR* v1)
+VECTOR *ApplyMatrixLV(MATRIX *m, VECTOR *v0, VECTOR *v1)
 {
-#if 1
-	// correct Psy-Q implementation
 	VECTOR tmpHI;
 	VECTOR tmpLO;
 
@@ -594,19 +531,16 @@ VECTOR* ApplyMatrixLV(MATRIX* m, VECTOR* v0, VECTOR* v1)
 	v1->vx = tmpHI.vx + tmpLO.vx;
 	v1->vy = tmpHI.vy + tmpLO.vy;
 	v1->vz = tmpHI.vz + tmpLO.vz;
-#else
-	APPLYMATRIX(m, v0, v1);
-#endif
 	return v1;
 }
 
-MATRIX* RotMatrix(SVECTOR* r, MATRIX* m)
+MATRIX *RotMatrix(SVECTOR *r, MATRIX *m)
 {
 	// correct Psy-Q implementation
 	int c0, c1, c2;
 	int s0, s1, s2;
 	int s2p0, s2m0, c2p0, c2m0;
-	int	s2c0, s2s0, c2c0, c2s0;
+	int s2c0, s2s0, c2c0, c2s0;
 
 	c0 = rcos(r->vx);
 	c1 = rcos(r->vy);
@@ -636,7 +570,7 @@ MATRIX* RotMatrix(SVECTOR* r, MATRIX* m)
 	return m;
 }
 
-MATRIX* RotMatrixYXZ(SVECTOR* r, MATRIX* m)
+MATRIX *RotMatrixYXZ(SVECTOR *r, MATRIX *m)
 {
 	// correct Psy-Q implementation
 	int c0, c1, c2;
@@ -669,7 +603,7 @@ MATRIX* RotMatrixYXZ(SVECTOR* r, MATRIX* m)
 	return m;
 }
 
-MATRIX* RotMatrixX(int r, MATRIX* m)
+MATRIX *RotMatrixX(int r, MATRIX *m)
 {
 	// correct Psy-Q implementation
 	int s0 = rsin(r);
@@ -691,7 +625,7 @@ MATRIX* RotMatrixX(int r, MATRIX* m)
 	return m;
 }
 
-MATRIX* RotMatrixY(int r, MATRIX* m)
+MATRIX *RotMatrixY(int r, MATRIX *m)
 {
 	// correct Psy-Q implementation
 	int s0 = rsin(r);
@@ -713,7 +647,7 @@ MATRIX* RotMatrixY(int r, MATRIX* m)
 	return m;
 }
 
-MATRIX* RotMatrixZ(int r, MATRIX* m)
+MATRIX *RotMatrixZ(int r, MATRIX *m)
 {
 	// correct Psy-Q implementation
 	int s0 = rsin(r);
@@ -735,11 +669,8 @@ MATRIX* RotMatrixZ(int r, MATRIX* m)
 	return m;
 }
 
-MATRIX* RotMatrixZYX_gte(SVECTOR* r, MATRIX* m)
+MATRIX *RotMatrixZYX_gte(SVECTOR *r, MATRIX *m)
 {
-#if 0
-	// TODO: correct Psy-Q implementation
-#else
 	m->m[0][0] = 0x1000;
 	m->m[0][1] = 0;
 	m->m[0][2] = 0;
@@ -755,13 +686,12 @@ MATRIX* RotMatrixZYX_gte(SVECTOR* r, MATRIX* m)
 	RotMatrixX(r->vx, m);
 	RotMatrixY(r->vy, m);
 	RotMatrixZ(r->vz, m);
-#endif
 	return m;
 }
 
-MATRIX* CompMatrix(MATRIX* m0, MATRIX* m1, MATRIX* m2)
+MATRIX *CompMatrix(MATRIX *m0, MATRIX *m1, MATRIX *m2)
 {
-	// UNTESTED
+	// TODO(aalhendi): Validate this against PsyQ behavior if CTR hits it.
 	SVECTOR tmp;
 	gte_MulMatrix0(m0, m1, m2);
 
@@ -780,10 +710,9 @@ MATRIX* CompMatrix(MATRIX* m0, MATRIX* m1, MATRIX* m2)
 	return m2;
 }
 
-MATRIX* CompMatrixLV(MATRIX* m0, MATRIX* m1, MATRIX* m2)
+MATRIX *CompMatrixLV(MATRIX *m0, MATRIX *m1, MATRIX *m2)
 {
-	// UNTESTED
-	// correct Psy-Q implementation
+	// TODO(aalhendi): Validate this against PsyQ behavior if CTR hits it.
 	VECTOR tmpHI;
 	VECTOR tmpLO;
 
@@ -799,7 +728,7 @@ MATRIX* CompMatrixLV(MATRIX* m0, MATRIX* m1, MATRIX* m2)
 		tmpLO.vx = -(-tmpHI.vx >> 0xf);
 		tmpHI.vx = -(-tmpHI.vx & 0x7fff);
 	}
-	else 
+	else
 	{
 		tmpLO.vx = tmpHI.vx >> 0xf;
 		tmpHI.vx = tmpHI.vx & 0x7fff;
@@ -810,7 +739,7 @@ MATRIX* CompMatrixLV(MATRIX* m0, MATRIX* m1, MATRIX* m2)
 		tmpLO.vy = -(-tmpHI.vy >> 0xf);
 		tmpHI.vy = -(-tmpHI.vy & 0x7fff);
 	}
-	else 
+	else
 	{
 		tmpLO.vy = tmpHI.vy >> 0xf;
 		tmpHI.vy = tmpHI.vy & 0x7fff;
@@ -858,7 +787,7 @@ MATRIX* CompMatrixLV(MATRIX* m0, MATRIX* m1, MATRIX* m2)
 	return m2;
 }
 
-MATRIX* TransMatrix(MATRIX* m, VECTOR* v)
+MATRIX *TransMatrix(MATRIX *m, VECTOR *v)
 {
 	m->t[0] = v->vx;
 	m->t[1] = v->vy;
@@ -866,7 +795,7 @@ MATRIX* TransMatrix(MATRIX* m, VECTOR* v)
 	return m;
 }
 
-MATRIX* ScaleMatrix(MATRIX* m, VECTOR* v)
+MATRIX *ScaleMatrix(MATRIX *m, VECTOR *v)
 {
 	m->m[0][0] = FIXED(m->m[0][0] * v->vx);
 	m->m[0][1] = FIXED(m->m[0][1] * v->vx);
@@ -882,17 +811,17 @@ MATRIX* ScaleMatrix(MATRIX* m, VECTOR* v)
 
 void SetDQA(int iDQA)
 {
-	CTC2(*(uint*)&iDQA, 27);
+	CTC2(*(u32 *)&iDQA, 27);
 }
 
 void SetDQB(int iDQB)
 {
-	CTC2(*(uint*)&iDQB, 28);
+	CTC2(*(u32 *)&iDQB, 28);
 }
 
 void SetFogNear(int a, int h)
 {
-	//Error division by 0
+	// Error division by 0
 	assert(h != 0);
 	int depthQ = -(((a << 2) + a) << 6);
 	assert(h != -1 && depthQ != 0x8000);
@@ -936,9 +865,8 @@ int rcos(int a)
 
 int ratan2(int y, int x)
 {
-	// correct Psy-Q implementation
 	int v;
-	uint ang;
+	u32 ang;
 	int xlt0, ylt0;
 
 	xlt0 = x < 0;
@@ -955,7 +883,7 @@ int ratan2(int y, int x)
 
 	if (y < x)
 	{
-		if (((uint)y & 0x7fe00000U) == 0)
+		if (((u32)y & 0x7fe00000U) == 0)
 			ang = (y << 10) / x;
 		else
 			ang = y / (x >> 10);
@@ -964,7 +892,7 @@ int ratan2(int y, int x)
 	}
 	else
 	{
-		if (((uint)x & 0x7fe00000U) == 0)
+		if (((u32)x & 0x7fe00000U) == 0)
 			ang = (x << 10) / y;
 		else
 			ang = x / (y >> 10);
