@@ -23,6 +23,7 @@ set(GAME_SOURCES
     platform/native_gpu.c
     platform/native_glad.c
     platform/native_input.c
+    platform/native_inline_c.c
     platform/native_libapi.c
     platform/native_libetc.c
     platform/native_libgpu.c
@@ -53,7 +54,6 @@ target_include_directories(SDL2-static PUBLIC externals/SDL/include)
 # PsyCross
 # NOTE(aalhendi): limit native target to PsyCross units that ctr_native links atm.
 set(PSYCROSS_C
-    externals/PsyCross/src/psx/INLINE_C.C
     externals/PsyCross/src/psx/LIBGTE.C
 )
 set(PSYCROSS_CPP
