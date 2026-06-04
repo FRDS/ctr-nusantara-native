@@ -43,6 +43,7 @@ __declspec(dllimport) unsigned long __stdcall GetLastError(void);
 #include "platform/native_gpu.h"
 #include "platform/native_input.h"
 #include "platform/native_log.h"
+#include "platform/native_replay_scheduler.h"
 #include "platform/native_renderer.h"
 
 static int s_hostAltKeyState = 0;
@@ -661,8 +662,12 @@ int main(int argc, char *argv[])
 	Platform_InitScratchpad();
 	Platform_RepairResidentPointers(0);
 
+#if defined(CTR_INTERNAL)
+	NativeReplayScheduler_ConfigureFromArgs(argc, argv);
+#else
 	(void)argc;
 	(void)argv;
+#endif
 
 	int result = CTR_Main();
 

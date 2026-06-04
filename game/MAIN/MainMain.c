@@ -1,5 +1,9 @@
 #include <common.h>
 
+#if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
+#include <platform/native_replay_scheduler.h>
+#endif
+
 void StateZero();
 
 // #define FastBoot
@@ -264,6 +268,9 @@ u32 main(void)
 			sdata->frameCounter++;
 
 			// Process all gamepad input
+#if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
+			NativeReplayScheduler_BeginFrame(gGT->frameTimer_VsyncCallback, sdata->frameCounter, sdata->mainGameState, sdata->Loading.stage, gGT->levelID);
+#endif
 			GAMEPAD_ProcessAnyoneVars(gGS);
 
 #ifdef FastBoot
@@ -406,6 +413,10 @@ u32 main(void)
 			{
 				AH_MaskHint_Update();
 			}
+#if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
+			if (NativeReplayScheduler_EndFrame(gGT->frameTimer_VsyncCallback, sdata->frameCounter, sdata->mainGameState, sdata->Loading.stage, gGT->levelID))
+				return 0;
+#endif
 			break;
 
 #ifndef CTR_NATIVE
