@@ -15,11 +15,6 @@ void MM_TrackSelect_Video_State(int state)
 		return;
 	}
 
-#ifdef CTR_NATIVE
-	// NOTE(aalhendi): Native does not compile the STR/MDEC preview path yet.
-	return;
-#endif
-
 	// if player sees a track icon
 	if (D230.trackSel_videoStateCurr == 1)
 	{

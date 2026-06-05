@@ -80,6 +80,7 @@ typedef enum
 #include "platform/native_renderer.c"
 #include "platform/native_savestate.c"
 #include "platform/native_state.c"
+#include "platform/native_str.c"
 
 #ifndef CC
 #if __GNUC__

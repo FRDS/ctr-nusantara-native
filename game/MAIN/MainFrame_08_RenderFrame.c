@@ -195,8 +195,6 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 	RenderVSYNC(gGT);
 
 #ifndef CTR_NATIVE
-	// NOTE(aalhendi): Retail runs the STR transfer path here; native skips it
-	// until host FMV playback is wired.
 	RenderFMV();
 #endif
 

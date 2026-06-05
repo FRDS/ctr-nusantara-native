@@ -55,7 +55,8 @@
 #include "230_75_MM_JumpTo_Characters.c"
 #include "230_76_MM_JumpTo_Scrapbook.c"
 
-// NOTE(aalhendi): Native does not provide the PsyQ STR/MDEC bridge yet.
+// NOTE(aalhendi): Native track previews use platform/native_str.c; the retail
+// PsyQ STR/MDEC stream helpers remain PSX-only until full FMV playback exists.
 #ifndef CTR_NATIVE
 #include "230_77_MM_Video_DecDCToutCallbackFunc.c"
 #include "230_78_MM_Video_KickCD.c"
