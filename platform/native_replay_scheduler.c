@@ -47,6 +47,12 @@ enum NativeReplaySchedulerMode
 	NATIVE_REPLAY_MODE_PLAYBACK
 };
 
+enum NativeReplayCheckpointPolicy
+{
+	NATIVE_REPLAY_CHECKPOINT_POLICY_ROLLING = 0,
+	NATIVE_REPLAY_CHECKPOINT_POLICY_BOOTSTRAP_ONLY
+};
+
 struct NativeReplayFileHeader
 {
 	u32 magic;
@@ -58,9 +64,10 @@ struct NativeReplayFileHeader
 	u32 checkpointSize;
 	u32 nativeStateSize;
 	u32 identityChecksum;
+	u32 checkpointPolicy;
 	char buildId[NATIVE_REPLAY_BUILD_ID_BYTES];
 	char platformId[NATIVE_REPLAY_PLATFORM_ID_BYTES];
-	u32 reserved[4];
+	u32 reserved[3];
 };
 
 struct NativeReplayFrameRecord
@@ -98,6 +105,7 @@ static u32 s_frameVBlankTotal;
 static u32 s_frameVBlankPacketCount;
 static s32 s_vblankPacketOverflow;
 static s32 s_vblankPlaybackMismatch;
+static enum NativeReplayCheckpointPolicy s_checkpointPolicy = NATIVE_REPLAY_CHECKPOINT_POLICY_ROLLING;
 static s32 s_reportEnabled;
 static char *s_reportDir;
 static char *s_reportReplayPath;
@@ -155,6 +163,33 @@ static u32 NativeReplayScheduler_RecordChecksum(const struct NativeReplayFrameRe
 	return NativeReplayScheduler_Fnv1a(&checksumRecord, sizeof(checksumRecord));
 }
 
+static const char *NativeReplayScheduler_CheckpointPolicyName(enum NativeReplayCheckpointPolicy policy)
+{
+	if (policy == NATIVE_REPLAY_CHECKPOINT_POLICY_BOOTSTRAP_ONLY)
+		return "bootstrap-only";
+
+	return "rolling";
+}
+
+static s32 NativeReplayScheduler_ParseCheckpointPolicy(const char *text, enum NativeReplayCheckpointPolicy *policy)
+{
+	if ((text == NULL) || (policy == NULL))
+		return 0;
+
+	if (strcmp(text, "rolling") == 0)
+	{
+		*policy = NATIVE_REPLAY_CHECKPOINT_POLICY_ROLLING;
+		return 1;
+	}
+	if ((strcmp(text, "bootstrap-only") == 0) || (strcmp(text, "bootstrap") == 0) || (strcmp(text, "once") == 0))
+	{
+		*policy = NATIVE_REPLAY_CHECKPOINT_POLICY_BOOTSTRAP_ONLY;
+		return 1;
+	}
+
+	return 0;
+}
+
 static void NativeReplayScheduler_CopyFixedString(char *dst, u32 dstSize, const char *src)
 {
 	size_t srcLen;
@@ -209,6 +244,7 @@ static void NativeReplayScheduler_InitHeader(struct NativeReplayFileHeader *head
 	header->frameRecordSize = sizeof(struct NativeReplayFrameRecord);
 	header->checkpointSize = (u32)NativeCheckpoint_GetSize();
 	header->nativeStateSize = (u32)NativeState_GetSize();
+	header->checkpointPolicy = (u32)s_checkpointPolicy;
 	NativeReplayScheduler_CopyFixedString(header->buildId, sizeof(header->buildId), CTR_NATIVE_BUILD_ID);
 	NativeReplayScheduler_CopyFixedString(header->platformId, sizeof(header->platformId), NativeReplayScheduler_PlatformID());
 	header->identityChecksum = NativeReplayScheduler_IdentityChecksum(header);
@@ -576,10 +612,12 @@ static void NativeReplayScheduler_WriteReportMetadata(s32 finalMetadata)
 	fprintf(file, "frame_record_size=%u\n", (unsigned int)s_header.frameRecordSize);
 	fprintf(file, "checkpoint_size=%u\n", (unsigned int)s_header.checkpointSize);
 	fprintf(file, "native_state_size=%u\n", (unsigned int)s_header.nativeStateSize);
+	fprintf(file, "checkpoint_mode=%s\n", NativeReplayScheduler_CheckpointPolicyName((enum NativeReplayCheckpointPolicy)s_header.checkpointPolicy));
 	fprintf(file, "identity_checksum=0x%08x\n", (unsigned int)s_header.identityChecksum);
 	fprintf(file, "frame_count=%u\n", (unsigned int)s_header.frameCount);
 	fprintf(file, "checkpoint_count=%u\n", (unsigned int)s_header.checkpointCount);
-	fprintf(file, "checkpoint_interval_frames=%u\n", (unsigned int)NATIVE_REPLAY_CHECKPOINT_INTERVAL_FRAMES);
+	fprintf(file, "checkpoint_interval_frames=%u\n",
+	        s_header.checkpointPolicy == NATIVE_REPLAY_CHECKPOINT_POLICY_ROLLING ? (unsigned int)NATIVE_REPLAY_CHECKPOINT_INTERVAL_FRAMES : 0u);
 	fprintf(file, "report_dir=%s\n", s_reportDir != NULL ? s_reportDir : "");
 	fprintf(file, "replay_path=%s\n", s_reportReplayPath != NULL ? s_reportReplayPath : "");
 	fprintf(file, "checkpoint_path=%s\n", s_reportCheckpointPath != NULL ? s_reportCheckpointPath : "");
@@ -692,7 +730,10 @@ static s32 NativeReplayScheduler_OpenCheckpointRecord(const char *replayPath)
 	s_checkpointWriterOpen = 1;
 	s_checkpointIndex = 0;
 	s_nextCheckpointFrame = 0;
-	Platform_Log("[CTR State] recording rolling checkpoints: %s interval=%u frames\n", s_checkpointPath, NATIVE_REPLAY_CHECKPOINT_INTERVAL_FRAMES);
+	if (s_checkpointPolicy == NATIVE_REPLAY_CHECKPOINT_POLICY_BOOTSTRAP_ONLY)
+		Platform_Log("[CTR State] recording bootstrap checkpoint only: %s\n", s_checkpointPath);
+	else
+		Platform_Log("[CTR State] recording rolling checkpoints: %s interval=%u frames\n", s_checkpointPath, NATIVE_REPLAY_CHECKPOINT_INTERVAL_FRAMES);
 	return 1;
 }
 
@@ -701,6 +742,8 @@ static s32 NativeReplayScheduler_WriteCheckpointIfDue(void)
 	struct NativeCheckpointFileRecordInfo info;
 
 	if (s_checkpointWriterOpen == 0)
+		return 1;
+	if ((s_checkpointPolicy == NATIVE_REPLAY_CHECKPOINT_POLICY_BOOTSTRAP_ONLY) && (s_checkpointIndex != 0))
 		return 1;
 	if ((s_replayFrame != 0) && (s_replayFrame < s_nextCheckpointFrame))
 		return 1;
@@ -752,10 +795,10 @@ static s32 NativeReplayScheduler_PrepareBootstrapCheckpoint(const char *replayPa
 		return 0;
 	}
 
-	Platform_Log("[CTR State] validated rolling checkpoints: %s records=%d\n", checkpointPath, recordCount);
+	Platform_Log("[CTR State] validated replay checkpoints: %s records=%d\n", checkpointPath, recordCount);
 	if (recordCount <= 0)
 	{
-		Platform_Log("[CTR State] rolling checkpoints are empty: %s\n", checkpointPath);
+		Platform_Log("[CTR State] replay checkpoints are empty: %s\n", checkpointPath);
 		free(checkpointPath);
 		return 0;
 	}
@@ -931,10 +974,12 @@ int NativeReplayScheduler_ConfigureFromArgs(int argc, char **argv)
 	const char *recordPath = NativeReplayScheduler_ArgValue(argc, argv, "--record-replay");
 	const char *playbackPath = NativeReplayScheduler_ArgValue(argc, argv, "--replay");
 	const char *reportRoot = NativeReplayScheduler_ArgValue(argc, argv, "--record-report");
+	const char *checkpointModeText = NativeReplayScheduler_ArgValue(argc, argv, "--checkpoint-mode");
 	const char *frameLimitText = NativeReplayScheduler_ArgValue(argc, argv, "--replay-frame-limit");
 
 	if (NativeReplayScheduler_ArgMissingValue(argc, argv, "--record-replay") || NativeReplayScheduler_ArgMissingValue(argc, argv, "--replay") ||
-	    NativeReplayScheduler_ArgMissingValue(argc, argv, "--record-report") || NativeReplayScheduler_ArgMissingValue(argc, argv, "--replay-frame-limit"))
+	    NativeReplayScheduler_ArgMissingValue(argc, argv, "--record-report") || NativeReplayScheduler_ArgMissingValue(argc, argv, "--checkpoint-mode") ||
+	    NativeReplayScheduler_ArgMissingValue(argc, argv, "--replay-frame-limit"))
 	{
 		Platform_Log("[CTR Replay] missing replay command value\n");
 		return 1;
@@ -943,6 +988,11 @@ int NativeReplayScheduler_ConfigureFromArgs(int argc, char **argv)
 	if (((recordPath != NULL) + (playbackPath != NULL) + (reportRoot != NULL)) > 1)
 	{
 		Platform_Log("[CTR Replay] choose --record-report, --record-replay, or --replay, not more than one\n");
+		return 1;
+	}
+	if ((checkpointModeText != NULL) && (recordPath == NULL) && (reportRoot == NULL))
+	{
+		Platform_Log("[CTR Replay] --checkpoint-mode only applies to replay recording\n");
 		return 1;
 	}
 
@@ -962,7 +1012,15 @@ int NativeReplayScheduler_ConfigureFromArgs(int argc, char **argv)
 	s_beginOpen = 0;
 	s_divergenceLogged = 0;
 	s_frameTimingConsumed = 0;
+	s_checkpointPolicy = NATIVE_REPLAY_CHECKPOINT_POLICY_ROLLING;
 	NativeReplayScheduler_ResetVSyncPackets();
+
+	if ((checkpointModeText != NULL) && !NativeReplayScheduler_ParseCheckpointPolicy(checkpointModeText, &s_checkpointPolicy))
+	{
+		Platform_Log("[CTR Replay] invalid --checkpoint-mode value: %s\n", checkpointModeText);
+		Platform_Log("[CTR Replay] valid checkpoint modes: rolling, bootstrap-only\n");
+		return 1;
+	}
 
 	if (recordPath != NULL)
 		return NativeReplayScheduler_OpenRecord(recordPath) ? 0 : 1;
