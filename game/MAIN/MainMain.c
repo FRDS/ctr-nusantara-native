@@ -318,6 +318,16 @@ u32 main(void)
 			// frame counter, not represented in common.h currently
 			sdata->frameCounter++;
 
+#if defined(CTR_NATIVE)
+			// Reload the .lng (loose or BIGFILE fallback) when the boot menu
+			// requests a language switch; cleared so it runs once.
+			if ((gGT->gameMode2 & LNG_CHANGE) != 0)
+			{
+				LOAD_LangFile((int)sdata->ptrBigfile1, gGT->langIndex);
+				gGT->gameMode2 &= ~LNG_CHANGE;
+			}
+#endif
+
 			// Process all gamepad input
 #if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
 			{
@@ -606,9 +616,14 @@ void StateZero()
 		firstEntry[i].size = 2 * 0x800;
 #endif
 
-	// English=1
-	// PAL SCES02105 calls it multiple times
+	// English=1; PAL SCES02105 calls it multiple times.
+	// Boot in Bahasa Indonesia (id.lng, loose index 8); changed later via the
+	// boot language menu.
+#if defined(CTR_NATIVE)
+	LOAD_LangFile((int)sdata->ptrBigfile1, 8);
+#else
 	LOAD_LangFile((int)sdata->ptrBigfile1, 1);
+#endif
 	GAMEPROG_NewGame_OnBoot();
 	gGT->overlayIndex_null_notUsed = 0;
 

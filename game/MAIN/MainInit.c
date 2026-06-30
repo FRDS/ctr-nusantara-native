@@ -546,6 +546,16 @@ void MainInit_FinalizeInit(struct GameTracker *gGT)
 	{
 		// 30 seconds
 		gGT->demoCountdownTimer = 900;
+
+#if defined(CTR_NATIVE)
+		// Before a language is chosen and the Oxide intro has played, collapse the
+		// attract countdown to 0 so the intro fires on the first title frame
+		// (boot order: ND-crate -> Oxide intro -> language menu -> title).
+		if ((gGT->notFoundInCode2 == 0) && (gGT->boolSeenOxideIntro == 0))
+		{
+			gGT->demoCountdownTimer = 0;
+		}
+#endif
 	}
 
 	// copy InstDef to InstancePool

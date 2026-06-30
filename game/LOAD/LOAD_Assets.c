@@ -202,6 +202,80 @@ struct LngFile
 	char strings[1];
 };
 
+#if defined(CTR_NATIVE)
+#include <platform/native_assets.h>
+
+// Language index -> loose-file code. 0-7 mirror the BIGFILE order; 8+ are
+// new languages loaded only as loose files.
+static const char *const s_langFileCodes[] = {
+    "ja", // 0
+    "en", // 1
+    "uk", // 2  English (UK)
+    "fr", // 3
+    "de", // 4
+    "it", // 5
+    "es", // 6
+    "ne", // 7  Dutch
+    "id", // 8  Bahasa Indonesia
+    "jv", // 9  Basa Jawa (Javanese)
+};
+
+// Loads assets/lang/<code>.lng into the shared lang buffer. Returns 1 on
+// success, or 0 to tell the caller to fall back to the BIGFILE entry.
+static int LOAD_LangFile_Loose(int lang)
+{
+	char path[64];
+	FILE *file;
+	long fileSize;
+	struct LngFile *lngFile;
+	int numStrings;
+	char **strArray;
+	int i;
+
+	if ((lang < 0) || (lang >= (int)len(s_langFileCodes)))
+	{
+		return 0;
+	}
+
+	snprintf(path, sizeof(path), "lang/%s.lng", s_langFileCodes[lang]);
+
+	file = NativeAssets_Open(path, "rb");
+	if (file == NULL)
+	{
+		return 0;
+	}
+
+	if ((fseek(file, 0, SEEK_END) != 0) || ((fileSize = ftell(file)) < 0) || (fseek(file, 0, SEEK_SET) != 0) ||
+	    ((u32)fileSize > (u32)sdata->langBufferSize))
+	{
+		fclose(file);
+		return 0;
+	}
+
+	lngFile = (struct LngFile *)sdata->lngFile;
+	if (fread(lngFile, 1, (size_t)fileSize, file) != (size_t)fileSize)
+	{
+		fclose(file);
+		return 0;
+	}
+	fclose(file);
+
+	numStrings = lngFile->numStrings;
+	strArray = (char **)((u32)lngFile + lngFile->offsetToPtrArr);
+
+	sdata->numLngStrings = numStrings;
+	sdata->lngStrings = strArray;
+
+	// .lng stores 32-bit offsets in the pointer array; rebase onto the buffer.
+	for (i = 0; i < numStrings; i++)
+	{
+		strArray[i] = (char *)((u32)strArray[i] + (u32)lngFile);
+	}
+
+	return 1;
+}
+#endif
+
 // param_1 - Pointer to "cd position of bigfile"
 // param_2 - language index - 0 ja, 1 en, 2 en2, 3 fr, 4 de, 5 it, 6 es, 7 ne
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80032b50-0x80032c24
@@ -224,6 +298,15 @@ void LOAD_LangFile(int bigfilePtr, int lang)
 	{
 		sdata->lngFile = MEMPACK_AllocMem(sdata->langBufferSize /* "lang buffer" */);
 	}
+
+#if defined(CTR_NATIVE)
+	// Load from a loose assets/lang/<code>.lng if present; otherwise fall
+	// through to the BIGFILE entry below.
+	if (LOAD_LangFile_Loose(lang))
+	{
+		return;
+	}
+#endif
 
 	lngFile = sdata->lngFile;
 

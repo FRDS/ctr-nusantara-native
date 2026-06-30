@@ -997,10 +997,11 @@ struct OverlayDATA_230
 	// 800b9ad0 - JpnRetail
 	s16 timerPerPlayer[4];
 
-#if BUILD == EurRetail
+#if BUILD == EurRetail || defined(CTR_NATIVE)
 	// 800b62d0
 	// starts at 900 frames (30 secs). If ran out (-1),
-	// menu will automatically choose current selection
+	// menu will automatically choose current selection.
+	// Native: reused for the reimplemented boot language menu (PAL feature).
 	int langMenuTimer;
 #endif
 

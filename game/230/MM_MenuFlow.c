@@ -599,6 +599,129 @@ void MM_JumpTo_Title_Returning(void)
 	D230.countMeta0xD = D230.title_numFrameTotal;
 }
 
+#if defined(CTR_NATIVE)
+// Boot language menu, shown once before the title so the player picks a
+// language. Built from file-scope statics (the original CTR-ModSDK LangMenu).
+
+// Maps rowSelected to a .lng index (s_langFileCodes in LOAD_Assets.c) via
+// (rowSelected + 1); row -1 (no selection) -> index 0 == Japanese.
+static const s16 s_langBootFileIndex[9] = {
+    0, // (row -1) Japanese glitch
+    1, // English    -> en
+    3, // French     -> fr
+    4, // German     -> de
+    5, // Italian    -> it
+    6, // Spanish    -> es
+    7, // Dutch      -> ne
+    8, // Indonesian -> id
+    9, // Javanese   -> jv
+};
+
+// Menu rows {stringIndex, up,down,left,right}, label drawn in the loaded
+// language: retail names (English..Dutch) plus two repurposed extra slots.
+static struct MenuRow s_rowsLngBoot[9] = {
+    {133, 0, 1, 0, 0}, // English
+    {134, 0, 2, 1, 1}, // French
+    {135, 1, 3, 2, 2}, // German
+    {136, 2, 4, 3, 3}, // Italian
+    {137, 3, 5, 4, 4}, // Spanish
+    {138, 4, 6, 5, 5}, // Dutch
+    {139, 5, 7, 6, 6}, // Indonesian (id)
+    {140, 6, 7, 7, 7}, // Javanese   (jv)
+    {-1, 0, 0, 0, 0},   // finalizer
+};
+
+void MM_MenuProc_LanguageBoot(struct RectMenu *menu);
+
+static struct RectMenu s_menuLngBoot = {
+    .stringIndexTitle = -1,
+    .posX_curr = 256,
+    .posY_curr = 118,
+    // CENTER_ON_Y | CENTER_ON_X | EXECUTE_FUNCPTR | 0x800 (matches scaffolding)
+    .state = 0xC03,
+    .rows = s_rowsLngBoot,
+    .funcPtr = MM_MenuProc_LanguageBoot,
+    .width = 171,
+    .height = 160, // 8 rows
+};
+
+void MM_MenuProc_LanguageBoot(struct RectMenu *menu)
+{
+	struct GameTracker *gGT = sdata->gGT;
+	s16 row = menu->rowSelected;
+
+	// Count the 30s idle timer down in real time; any input resets it, and
+	// when it expires auto-commit whatever is selected.
+	if (menu->unk1e == 1)
+	{
+		if (sdata->gGamepads->anyoneHeldCurr != 0)
+		{
+			D230.langMenuTimer = 900;
+		}
+
+		D230.langMenuTimer -= CTR_VFRAME_DELTA(gGT);
+
+		if (D230.langMenuTimer >= 0)
+		{
+			return;
+		}
+	}
+
+	// Commit the selection: mark a language chosen (notFoundInCode2), hand
+	// control to the main menu, and request the .lng load.
+	gGT->notFoundInCode2 = 1;
+	D230.menuMainMenu.state |= DISABLE_INPUT_ALLOW_FUNCPTRS;
+	sdata->ptrDesiredMenu = &D230.menuMainMenu;
+
+	gGT->langIndex = s_langBootFileIndex[row + 1];
+	gGT->gameMode2 |= LNG_CHANGE;
+
+	menu->unk1e = 0;
+}
+
+// Recompute the boot menu's font and vertical anchor for the current row count
+// so the box fits the viewport, keeping the baseline-8-row bottom edge fixed and
+// switching to the small font past 10 rows.
+static void MM_LanguageBoot_Setup(void)
+{
+	// Baseline layout that posY == 118 was authored against.
+	enum
+	{
+		LANG_BOOT_BASELINE_ROWS = 8,
+		LANG_BOOT_BASELINE_POSY = 118,
+		// Big font fits up to this many rows; past it, switch to small font.
+		LANG_BOOT_BIG_FONT_MAX_ROWS = 10,
+	};
+
+	int numRows = 0;
+	while (s_rowsLngBoot[numRows].stringIndex != -1)
+	{
+		numRows++;
+	}
+
+	// Row pitch matches RECTMENU_GetHeight: big rows add font height + 3, small
+	// rows add the small font height. Switch fonts once big can't fit.
+	int rowHeight;
+	if (numRows > LANG_BOOT_BIG_FONT_MAX_ROWS)
+	{
+		s_menuLngBoot.state |= USE_SMALL_FONT;
+		rowHeight = data.font_charPixHeight[FONT_SMALL];
+	}
+	else
+	{
+		s_menuLngBoot.state &= ~USE_SMALL_FONT;
+		rowHeight = data.font_charPixHeight[FONT_BIG] + 3;
+	}
+
+	int baselineHeight = LANG_BOOT_BASELINE_ROWS * (data.font_charPixHeight[FONT_BIG] + 3);
+	int currentHeight = numRows * rowHeight;
+
+	// Keep the bottom edge anchored at the baseline: posY = 118 + (baseH - curH)/2.
+	// Identity (118) at the baseline 8 rows; rises as rows are added.
+	s_menuLngBoot.posY_curr = (s16)(LANG_BOOT_BASELINE_POSY + (baselineHeight - currentHeight) / 2);
+}
+#endif
+
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800b4364-0x800b43f4.
 void MM_JumpTo_Title_FirstTime(void)
 {
@@ -608,7 +731,30 @@ void MM_JumpTo_Title_FirstTime(void)
 
 	MainStats_ClearBattleVS();
 
-#if BUILD == EurRetail
+#if defined(CTR_NATIVE)
+	// First-boot order is intro -> language menu -> title; notFoundInCode2 marks
+	// a language as chosen.
+	if (gGT->notFoundInCode2 == 0)
+	{
+		if (gGT->boolSeenOxideIntro == 0)
+		{
+			// Intro not played yet: open the title normally so the attract path
+			// stays live and the Oxide intro fires.
+			sdata->ptrActiveMenu = &D230.menuMainMenu;
+		}
+		else
+		{
+			// Intro seen, language not chosen yet: fit and show the boot menu.
+			MM_LanguageBoot_Setup();
+			sdata->ptrActiveMenu = &s_menuLngBoot;
+			D230.langMenuTimer = 900;
+		}
+	}
+	else
+	{
+		sdata->ptrActiveMenu = &D230.menuMainMenu;
+	}
+#elif BUILD == EurRetail
 	// if you have not chose a language or skipped the language menu
 	if (sdata->boolLangChosen == 0)
 	{
