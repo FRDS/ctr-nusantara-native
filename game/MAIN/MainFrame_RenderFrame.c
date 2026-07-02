@@ -691,12 +691,10 @@ void RenderBucket_QueueAllInstances(struct GameTracker *gGT)
 		lod |= 4;
 	}
 
-	RBI = RenderBucket_QueueLevInstances(&gGT->cameraDC[0], (uint32_t *)&gGT->backBuffer->otMem, gGT->ptrRenderBucketInstance,
-	                                     (char *)(u32)(u8)sdata->LOD[lod], // this weird cast is what ghidra does
-	                                     (char)numPlyrCurrGame, gGT->gameMode1 & PAUSE_ALL);
+	RBI = RenderBucket_QueueLevInstances(&gGT->cameraDC[0], &gGT->backBuffer->otMem, gGT->ptrRenderBucketInstance, (u8)sdata->LOD[lod], (char)numPlyrCurrGame,
+	                                     gGT->gameMode1 & PAUSE_ALL);
 
-	RBI = RenderBucket_QueueNonLevInstances(gGT->JitPools.instance.taken.first, (uint32_t *)&gGT->backBuffer->otMem, (void *)RBI,
-	                                        (char *)(u32)(u8)sdata->LOD[lod], // this weird cast is what ghidra does
+	RBI = RenderBucket_QueueNonLevInstances(gGT->JitPools.instance.taken.first, &gGT->backBuffer->otMem, (void *)RBI, (u8)sdata->LOD[lod],
 	                                        (char)numPlyrCurrGame, gGT->gameMode1 & PAUSE_ALL);
 
 	// Aug prototype
@@ -1099,7 +1097,7 @@ void WindowDivsionLines(struct GameTracker *gGT)
 
 		// set R, G, B, CODE, all to zero,
 		// this makes black color, and invalid CODE
-		*(int *)&p->r0 = 0;
+		CtrGpu_WriteColorCode(&p->r0, 0);
 
 		// this sets CODE to the proper value
 		setPolyF4(p);
@@ -1136,7 +1134,7 @@ void WindowDivsionLines(struct GameTracker *gGT)
 
 		// set R, G, B, CODE, all to zero,
 		// this makes black color, and invalid CODE
-		*(int *)&p->r0 = 0;
+		CtrGpu_WriteColorCode(&p->r0, 0);
 
 		// this sets CODE to the proper value
 		setPolyF4(p);
@@ -1171,7 +1169,7 @@ void WindowDivsionLines(struct GameTracker *gGT)
 
 		// set R, G, B, CODE, all to zero,
 		// this makes black color, and invalid CODE
-		*(int *)&p->r0 = 0;
+		CtrGpu_WriteColorCode(&p->r0, 0);
 
 		// this sets CODE to the proper value
 		setPolyF4(p);
@@ -1202,7 +1200,7 @@ void RenderDispEnv_UI(struct GameTracker *gGT)
 	PushBuffer_SetDrawEnv_Normal(&pb->ptrOT[4], pb, gGT->backBuffer, 0, 0);
 }
 
-__attribute__((optimize("O0"))) int ReadyToFlip(struct GameTracker *gGT)
+CTR_GCC_OPTIMIZE_O0 int ReadyToFlip(struct GameTracker *gGT)
 {
 	return
 	    // two VSYNCs passed, 30fps lock
@@ -1212,7 +1210,7 @@ __attribute__((optimize("O0"))) int ReadyToFlip(struct GameTracker *gGT)
 	    (gGT->bool_DrawOTag_InProgress == 0);
 }
 
-__attribute__((optimize("O0"))) int ReadyToBreak(struct GameTracker *gGT)
+CTR_GCC_OPTIMIZE_O0 int ReadyToBreak(struct GameTracker *gGT)
 {
 	return
 

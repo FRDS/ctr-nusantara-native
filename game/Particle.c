@@ -174,12 +174,7 @@ void Particle_OnDestroy(struct Particle *p)
 
 static u32 Particle_GetAxisFlags(const struct Particle *p)
 {
-	return *(const u32 *)&p->flagsAxis;
-}
-
-static void Particle_SetAxisFlags(struct Particle *p, u32 flags)
-{
-	*(u32 *)&p->flagsAxis = flags;
+	return CTR_ReadU32LE(&p->flagsAxis);
 }
 
 static int Particle_OscillatorValue(struct ParticleOscillator *osc)
@@ -385,7 +380,7 @@ void Particle_UpdateList(struct Particle **listHead, struct Particle *p)
 
 			if ((flagsSetColor & 0x4000) == 0)
 			{
-				*(u32 *)&p->axis[10].startVal = *(u32 *)&p->axis[10].velocity;
+				CTR_WriteU32LE(&p->axis[10].startVal, CTR_ReadU32LE(&p->axis[10].velocity));
 			}
 		}
 
@@ -462,8 +457,8 @@ void Particle_UpdateAllParticles(void)
 		return;
 	}
 
-	Particle_UpdateList((struct Particle **)&gGT->particleList_ordinary, gGT->particleList_ordinary);
-	Particle_UpdateList((struct Particle **)&gGT->particleList_heatWarp, gGT->particleList_heatWarp);
+	Particle_UpdateList(&gGT->particleList_ordinary, gGT->particleList_ordinary);
+	Particle_UpdateList(&gGT->particleList_heatWarp, gGT->particleList_heatWarp);
 }
 
 
@@ -784,7 +779,7 @@ static void Particle_RenderList_WriteSpecialPrimitive(struct ParticleSpecialPack
 		packet->line.color1 = particle->axis[10].startVal;
 	}
 
-	*(u32 *)(void *)&particle->axis[10].velocity = color;
+	CTR_WriteU32LE(&particle->axis[10].velocity, color);
 	packet->drawMode = 0xe1000a00 | (flagsSetColor & 0x60);
 	packet->pad = 0;
 	packet->line.xy0 = MFC2(12);
@@ -1000,8 +995,8 @@ static void Particle_RenderList_WriteNormalPrimitive(POLY_FT4 *poly, struct Icon
 	CtrGpu_WriteColorCode(&poly->r0, color | 0x2c000000);
 	CtrGpu_WritePackedUVWord(&poly->u0, Particle_RenderList_ReadWord(icon, 0x14));
 	CtrGpu_WritePackedUVWord(&poly->u1, (Particle_RenderList_ReadWord(icon, 0x18) & 0xff9fffff) | ((u32)(flagsSetColor & 0x60) << 16));
-	CtrGpu_WritePackedUV(&poly->u2, *(u16 *)(void *)((char *)icon + 0x1c));
-	CtrGpu_WritePackedUV(&poly->u3, *(u16 *)(void *)((char *)icon + 0x1e));
+	CtrGpu_WritePackedUV(&poly->u2, CTR_ReadU16LE(&icon->texLayout.u2));
+	CtrGpu_WritePackedUV(&poly->u3, CTR_ReadU16LE(&icon->texLayout.u3));
 
 	width = (Particle_RenderList_ReadByte(icon, 0x18) - Particle_RenderList_ReadByte(icon, 0x14)) + 1;
 	height = (Particle_RenderList_ReadByte(icon, 0x1d) - Particle_RenderList_ReadByte(icon, 0x15)) + 1;
@@ -1236,12 +1231,12 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 
 static u32 Particle_Init_GetAxisFlags(const struct Particle *p)
 {
-	return *(const u32 *)&p->flagsAxis;
+	return CTR_ReadU32LE(&p->flagsAxis);
 }
 
 static void Particle_Init_SetAxisFlags(struct Particle *p, u32 flags)
 {
-	*(u32 *)&p->flagsAxis = flags;
+	CTR_WriteU32LE(&p->flagsAxis, flags);
 }
 
 static u8 ParticleEmitter_GetInitOffset(const struct ParticleEmitter *emSet)
@@ -1251,13 +1246,10 @@ static u8 ParticleEmitter_GetInitOffset(const struct ParticleEmitter *emSet)
 
 static void ParticleEmitter_CopyOscillator(struct ParticleOscillator *osc, const struct ParticleEmitter *emSet)
 {
-	const u32 *src = (const u32 *)emSet->data;
-	u32 *dst = (u32 *)&osc->flags;
-
-	dst[0] = src[0];
-	dst[1] = src[1];
-	dst[2] = src[2];
-	dst[3] = src[3];
+	CTR_WriteU32LE(&osc->flags, CTR_ReadU32LE(&emSet->data[0]));
+	CTR_WriteU32LE((u8 *)&osc->flags + 4, CTR_ReadU32LE(&emSet->data[4]));
+	CTR_WriteU32LE((u8 *)&osc->flags + 8, CTR_ReadU32LE(&emSet->data[8]));
+	CTR_WriteU32LE((u8 *)&osc->flags + 12, CTR_ReadU32LE(&emSet->data[12]));
 }
 
 static void Particle_InitAxis(struct Particle *p, const struct ParticleEmitter *emSet, u8 axisIndex, u32 *flagsAxis)
@@ -1511,7 +1503,7 @@ struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, struct Particl
 			u32 color = Particle_SetColors(Particle_Init_GetAxisFlags(p), p->flagsSetColor, p) | 0x50000000;
 
 			p->axis[10].startVal = color;
-			*(u32 *)&p->axis[10].velocity = color;
+			CTR_WriteU32LE(&p->axis[10].velocity, color);
 		}
 		else
 		{

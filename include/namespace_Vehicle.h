@@ -579,9 +579,10 @@ enum
 	ACTION_HUMAN_HUMAN_COLLISION = 0x10000000,
 	ACTION_REVERSE_STEER_LEFT = 0x20000000,
 	ACTION_REVERSE_STEER_RIGHT = 0x40000000,
-	ACTION_DROPPING_MINE = 0x80000000u,
 };
 typedef u32 Actions;
+
+#define ACTION_DROPPING_MINE 0x80000000u
 
 enum
 {
@@ -1063,7 +1064,7 @@ struct Driver
 	// 0x304 = No sound yet defined* (VehEmitter.c: VehEmitter_DriverMain)
 	// 0x308 = Kart "kirb_dirt" sound
 	// 0x30C = Kart "engine_jet" sound
-	void *driverAudioPtrs[4];
+	u32 driverAudioPtrs[4];
 
 	// 0x310
 	MATRIX matrixMovingDir;

@@ -208,7 +208,6 @@ int CS_Instance_SafeCheckAnimFrame(struct Instance *inst, int animIndex, int LOD
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800ac694-0x800ac714
 char CS_Instance_BoolPlaySound(struct CutsceneObj *cs, struct Instance *desiredInst)
 {
-	struct Instance *inst;
 	struct Instance **visInstSrc;
 	struct InstDrawPerPlayer *idpp;
 
@@ -259,7 +258,7 @@ void CS_Instance_InitMatrix(void)
 
 	for (int i = 0; i < 4; i++)
 	{
-		char *data = (char *)D233.cs_initMatrixTable[i].data;
+		struct CsInitMatrixEntry *data = D233.cs_initMatrixTable[i].data;
 		int count = D233.cs_initMatrixTable[i].count;
 
 		if (data == NULL || count <= 0)
@@ -269,15 +268,17 @@ void CS_Instance_InitMatrix(void)
 
 		for (int j = 0; j < count; j++)
 		{
-			char *entry = data + j * 0x20;
+			struct CsInitMatrixEntry *entry = &data[j];
 
-			ConvertRotToMatrix(&mat, (const SVec3 *)(entry + 8));
+			ConvertRotToMatrix(&mat, &entry->rot);
 
-			scale.m[0][0] = *(s16 *)(entry + 0x10);
-			scale.m[1][1] = *(s16 *)(entry + 0x12);
-			scale.m[2][2] = *(s16 *)(entry + 0x14);
+			scale.m[0][0] = entry->scale.x;
+			scale.m[1][1] = entry->scale.y;
+			scale.m[2][2] = entry->scale.z;
 
-			MatrixRotate((MATRIX *)(entry + 8), &scale, &mat);
+			MATRIX matrix;
+			MatrixRotate(&matrix, &scale, &mat);
+			*CsInitMatrixEntry_GetMatrix(entry) = *(CsInitMatrixOverlap *)&matrix;
 		}
 	}
 }

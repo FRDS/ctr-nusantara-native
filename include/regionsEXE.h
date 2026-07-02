@@ -12,13 +12,57 @@ enum
 // overlapping this entry and the next stride.
 struct MatrixND
 {
-	s16 m[3][3];
-	s16 extraShort;
-	int t[3];
+	union
+	{
+		struct
+		{
+			SVec3Slot bakedOffset;
+			SVec3Slot authoredRot;
+			SVec3Slot authoredScale;
+			s32 authoredPad[2];
+		};
+
+		struct
+		{
+			s16 m[3][3];
+			s16 extraShort;
+			int t[3];
+		};
+
+		MATRIX matrix;
+	};
 };
 
+typedef struct CTR_MAY_ALIAS MatrixNDOverlapMatrix
+{
+	s16 m[3][3];
+	Vec3 t;
+} MatrixNDOverlapMatrix;
+
+CTR_STATIC_ASSERT(sizeof(MatrixNDOverlapMatrix) == sizeof(MATRIX));
+
+force_inline MatrixNDOverlapMatrix *MatrixND_GetOverlapMatrix(struct MatrixND *matrix)
+{
+	return (MatrixNDOverlapMatrix *)((u8 *)matrix + MATRIX_ND_BAKED_MATRIX_OFFSET);
+}
+
 CTR_STATIC_ASSERT(sizeof(struct MatrixND) == 0x20);
+CTR_STATIC_ASSERT(offsetof(struct MatrixND, bakedOffset) == 0x0);
+CTR_STATIC_ASSERT(offsetof(struct MatrixND, authoredRot) == 0x8);
+CTR_STATIC_ASSERT(offsetof(struct MatrixND, authoredScale) == 0x10);
 CTR_STATIC_ASSERT(MATRIX_ND_BAKED_MATRIX_OFFSET == offsetof(struct MatrixND, m[1][1]));
+CTR_STATIC_ASSERT(MATRIX_ND_BAKED_MATRIX_OFFSET == offsetof(struct MatrixND, authoredRot));
+CTR_STATIC_ASSERT(offsetof(struct MatrixND, matrix) == 0x0);
+
+struct SoundFadeInput
+{
+	int unk;
+	int desiredVolume;
+	int currentVolume;
+	int soundID_soundCount;
+};
+
+CTR_STATIC_ASSERT(sizeof(struct SoundFadeInput) == 0x10);
 
 typedef union DriverModelExtraSlot
 {
@@ -1472,7 +1516,7 @@ struct Data
 	// 80080dd4 -- JpnTrial		0x23
 	// 800822a4 -- EurRetail	0x23
 	// 800850e4 -- JpnRetail	0x23
-	int *ptrColor[NUM_COLORS];
+	u32 *ptrColor[NUM_COLORS];
 
 // 8007FF80 -- SepReview
 // 80081dfc -- UsaRetail
@@ -1608,11 +1652,7 @@ struct Data
 	u16 pauseScreenStrip[0x10];
 
 	// 800824a8 -- UsaRetail
-	struct
-	{
-		char input[4];
-		int output;
-	} gamepadMapBtn[20];
+	struct GamepadButtonMap gamepadMapBtn[20];
 
 // 80080744 -- SepReview	7C4
 // 80082548 -- UsaRetail	74C
@@ -2845,7 +2885,7 @@ struct sData
 
 	// 8008d038 -- UsaRetail
 	// 8008d3c0 -- EurRetail
-	char unkPadSetActAlign[8];
+	u8 unkPadSetActAlign[8];
 
 // ==========================================================
 
@@ -2853,7 +2893,7 @@ struct sData
 #if BUILD >= EurRetail
 	// 8008d3c8 -- EurRetail
 	// calls padSetAct on slot 2, after realizing a multitap is in slot 1
-	char unkPadSetAct[0x4];
+	u8 unkPadSetAct[0x4];
 #endif
 
 	// 8008b4a8 -- SepReview
@@ -3285,8 +3325,8 @@ struct sData
 	int battleSetupWeaponHighlighted;
 
 	// 8008d438 UI color data
-	int battleSetup_Color_UI_1;
-	int battleSetup_Color_UI_2;
+	u32 battleSetup_Color_UI_1;
+	u32 battleSetup_Color_UI_2;
 
 	// 8008b8a0 Sep3
 	// 8008d440 UsaRetail
@@ -3344,7 +3384,7 @@ struct sData
 	// 8008c3c0 JpnTrial
 	// 8008d800 EurRetail
 	// 80090874 JpnRetail
-	int DrawSolidBoxData[3];
+	u32 DrawSolidBoxData[3];
 
 	char strcatData1_colon[4];
 #if BUILD == EurRetail
@@ -3623,8 +3663,16 @@ struct sData
 	// 8008d668 - UsaRetail
 	// 8008da1c - EurRetail
 	// used for RNG
-	int const_0x30215400;
-	int const_0x493583fe;
+	union
+	{
+		struct RngDeadCoedState advRng;
+
+		struct
+		{
+			u32 const_0x30215400;
+			u32 const_0x493583fe;
+		};
+	};
 
 	// 8008d670
 	// once used to load path files (Spyro 2 demo),
@@ -4094,7 +4142,8 @@ struct sData
 	// search for FUN_800b3f88,
 	// determines if Aku is talking, to disable
 	// on-screen text, or delay track loading
-	int AkuAkuHintState;
+	s16 AkuAkuHintState;
+	s16 padding_AkuAkuHintState;
 
 	// 8008bcb0 -- SepReview
 	// 8008d878 -- UsaRetail
@@ -4805,23 +4854,7 @@ struct sData
 
 	// 800961c4
 	// eight members, 0x10 each
-	struct
-	{
-		// 0x0
-		void *next;
-
-		// 0x4
-		void *prev;
-
-		// 0x8
-		s16 voiceID;        // param_1
-		char characterID_1; // param_2
-		char characterID_2; // param_3
-
-		// 0xC
-		int startFrame;
-
-	} voicelinePool[8];
+	struct VoicelineItem voicelinePool[8];
 
 	// 80096244
 	int timeSet1[0x10];
@@ -4830,13 +4863,7 @@ struct sData
 	int timeSet2[0x10];
 
 	// 800962c4 and 800962d4
-	struct
-	{
-		int unk;
-		int desiredVolume;
-		int currentVolume;
-		int soundID_soundCount;
-	} SoundFadeInput[2];
+	struct SoundFadeInput SoundFadeInput[2];
 
 #if BUILD >= UsaRetail
 	// 800962E4
@@ -4935,17 +4962,8 @@ struct sData
 	u32 buttonTapPerPlayer[4];
 
 	// 8009A9A0
-	// 0x90 bytes total
-	struct
-	{
-		struct Instance *inst;
-
-		SVec3 rot;
-
-		s16 padding;
-
-		// 4 profiles, 3 instances per profile
-	} LoadSaveData[12];
+	// 4 profiles, 3 instances per profile, 0x90 bytes total
+	struct SelectProfileLoadSaveIcon LoadSaveData[12];
 
 	// 0x8009AA30
 	// & 1: frame2->frame1
@@ -5184,6 +5202,8 @@ CTR_STATIC_ASSERT(sizeof(struct MetaDataMODEL) == 0xC);
 
 CTR_STATIC_ASSERT(OFFSETOF_DATA(rowsQuit[0]) == 0x800841BC);
 CTR_STATIC_ASSERT(OFFSETOF_DATA(menuQuit) == 0x800841D0);
+CTR_STATIC_ASSERT(OFFSETOF_SDATA(AkuAkuHintState) == 0x8008D874);
+CTR_STATIC_ASSERT(OFFSETOF_SDATA(lngStrings) == 0x8008D878);
 CTR_STATIC_ASSERT(OFFSETOF_SDATA(botCrashNavRot) == 0x8008D9EC);
 CTR_STATIC_ASSERT(OFFSETOF_SDATA(vehicleCollisionImpactStrength) == 0x8008D9F4);
 CTR_STATIC_ASSERT(OFFSETOF_SDATA(talkMaskXASamplePeak) == 0x8008D9F8);

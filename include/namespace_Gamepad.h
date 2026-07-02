@@ -52,6 +52,15 @@ enum Buttons
 	BTN_TRIANGLE = 0x40000
 };
 
+struct GamepadButtonMap
+{
+	// 0x0
+	u8 rawInput[4];
+
+	// 0x4
+	u32 buttons;
+};
+
 enum Plug
 {
 	UNPLUGGED = -1,
@@ -124,24 +133,31 @@ struct __attribute__((packed)) ControllerPacket
 
 struct __attribute__((packed)) MultitapPacket
 {
-	// 0x0
-	// see ControllerPacket
-	u8 plugged;
-
-	// 0x1
-	// ditto
 	union
 	{
 		struct
 		{
-			u8 payloadLength : 4;
-			u8 controllerType : 4;
-		};
-		u8 controllerData;
-	};
+			// 0x0
+			// see ControllerPacket
+			u8 plugged;
 
-	// 0x2
-	struct ControllerPacket controllers[4];
+			// 0x1
+			// ditto
+			union
+			{
+				struct
+				{
+					u8 payloadLength : 4;
+					u8 controllerType : 4;
+				};
+				u8 controllerData;
+			};
+
+			// 0x2
+			struct ControllerPacket controllers[4];
+		};
+		struct ControllerPacket controller;
+	};
 
 	// 34 bytes
 };
@@ -212,13 +228,13 @@ struct GamepadBuffer
 	// if power is above the 60-unit hardware budget
 
 	// 0x2A
-	char motorDesired[2];
+	u8 motorDesired[2];
 
 	// 0x2C
-	char motorPower[2];
+	u8 motorPower[2];
 
 	// 0x2E
-	char motorSubmit[2];
+	u8 motorSubmit[2];
 
 	// === DualShock ===
 
@@ -337,6 +353,7 @@ struct RacingWheelData
 };
 
 CTR_STATIC_ASSERT(sizeof(struct GamepadBuffer) == 0x50);
+CTR_STATIC_ASSERT(sizeof(struct GamepadButtonMap) == 0x8);
 #if BUILD <= SepReview
 CTR_STATIC_ASSERT(sizeof(struct GamepadSystem) == 0x2D4);
 #elif BUILD < EurRetail

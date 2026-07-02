@@ -35,8 +35,9 @@ enum GameMode1
 	ADVENTURE_CUP = 0x10000000,
 	GAME_CUTSCENE = 0x20000000,
 	LOADING = 0x40000000,
-	ADVENTURE_BOSS = 0x80000000
 };
+
+#define ADVENTURE_BOSS 0x80000000u
 
 enum GameMode1Masks
 {
@@ -217,6 +218,14 @@ CTR_STATIC_ASSERT(offsetof(struct MainRenderLevelGeometryScratch, fullDynamicFad
 CTR_STATIC_ASSERT(sizeof(struct MainRenderLevelGeometryScratch) == 0x30);
 
 // real ND name
+struct RngDeadCoedState
+{
+	u32 state0;
+	u32 state1;
+};
+
+CTR_STATIC_ASSERT(sizeof(struct RngDeadCoedState) == 0x8);
+
 struct GameTracker
 {
 	// 0x0
@@ -424,11 +433,11 @@ struct GameTracker
 
 	// 1c9c
 	// exhaust, fire, etc
-	void *particleList_ordinary;
+	struct Particle *particleList_ordinary;
 
 	// 1ca0
 	// distorts screen above fire
-	void *particleList_heatWarp;
+	struct Particle *particleList_heatWarp;
 
 	// 1ca4
 	int numParticles;
@@ -1278,14 +1287,7 @@ struct GameTracker
 
 	// 252c
 	// this stuct is passed to FUN_8006c684 and updates every frame (this is func with 0xdeadc0ed)
-	struct
-	{
-		// 252c
-		int unk1;
-
-		// 2530
-		int unk2;
-	} deadcoed_struct;
+	struct RngDeadCoedState deadcoed_struct;
 
 	// 0x2534
 	char final_filler_mostly_null[0x0B];

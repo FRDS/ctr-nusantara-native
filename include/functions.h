@@ -73,7 +73,7 @@ void CTR_Box_DrawSolidBox(RECT *r, Color color, uint32_t *ot);
 // decal
 u32 DecalFont_boolRacingWheel(void);
 void DecalFont_DrawLine(char *str, int posX, int posY, s16 fontType, int flags);
-void DecalFont_DrawLineStrlen(u8 *str, s16 len, int posX, s16 posY, s16 fontType, int flags);
+void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontType, int flags);
 int DecalFont_DrawMultiLine(char *str, int posX, int posY, int maxPixLen, s16 fontType, int flags);
 void DecalGlobal_EmptyFunc_MainFrame_ResetDB(void);
 void DecalGlobal_Clear(struct GameTracker *gGT);
@@ -147,7 +147,7 @@ u32 OtherFX_Modify(u32 soundId, u32 flags);
 void OtherFX_Stop1(int soundID_count);
 void OtherFX_Stop2(int soundID_count);
 void OtherFX_RecycleNew(u32 *soundID_Count, u32 newSoundID, u32 modifyFlags);
-void OtherFX_RecycleMute(int *soundID_Count);
+void OtherFX_RecycleMute(u32 *soundID_Count);
 char EngineAudio_InitOnce(u32 soundID, u32 flags);
 s16 EngineAudio_Recalculate(u32 soundID, u32 sfx);
 void EngineAudio_Stop(u32 soundID);
@@ -269,7 +269,7 @@ int GTE_GetSquaredDistance(s16 *pos1, s16 *pos2);
 void CalculateVolumeFromDistance(u32 *soundIDCount, u32 soundID, int distance);
 void PlayWarppadSound(u32 distance);
 void Level_SoundLoopSet(int *soundIDCount, u32 soundID, u32 volume);
-void Level_SoundLoopFade(int *fade, u32 soundID, int desiredVolume, int fadeStep);
+void Level_SoundLoopFade(struct SoundFadeInput *fade, u32 soundID, int desiredVolume, int fadeStep);
 void Level_RandomFX(int *cooldown, u32 soundID, int baseCooldown, u32 randomRange, int volumeScale);
 void Level_AmbientSound(void);
 void PlaySound3D(u32 soundID, struct Instance *inst);
@@ -304,7 +304,7 @@ void LevInstDef_RePack(struct mesh_info *ptr_mesh_info, b32 boolAdvHub);
 struct Instance *LinkedCollide_Hitbox_Desc(struct HitboxDesc *objBoxDesc);
 struct Instance *LinkedCollide_Hitbox(struct Instance *objInst, struct Thread *_objTh, struct Thread *thBucket, struct BoundingBox bbox);
 struct Instance *LinkedCollide_Radius(struct Instance *objInst, struct Thread *_objTh, struct Thread *thBucket, u32 hitRadius);
-void LHMatrix_Parent(struct Instance *pDst, struct Instance *pSrc, SVECTOR *transVec);
+void LHMatrix_Parent(struct Instance *pDst, struct Instance *pSrc, const SVec3 *transVec);
 
 // LIST
 void LIST_AddBack(struct LinkedList *L, struct Item *I);
@@ -342,12 +342,12 @@ void LOAD_ReadFileASyncCallback(u8 result, u8 *unk);
 
 // same hack as AppendQueue, see notes there
 #define LOAD_ReadFile(a, b, c, d) LOAD_ReadFile_ex(a, b, c, d, &data.currSlot.size_UNUSED, NULL)
-void *LOAD_ReadFile_ex(struct BigHeader *bigfile, u32 loadType, int subfileIndex, void *ptrDst, int *sizePtr, void (*callback)(struct LoadQueueSlot *));
+void *LOAD_ReadFile_ex(struct BigHeader *bigfile, u32 loadType, int subfileIndex, void *ptrDst, u32 *sizePtr, void (*callback)(struct LoadQueueSlot *));
 // void* LOAD_ReadFile(struct BigHeader* bigfile, /*u32 loadType,*/ int subfileIndex, void* destination, /*int *size,*/ void * callback);
 
 
-void *LOAD_VramFile(void *bigfilePtr, int subfileIndex, void *ptrDestination, int *sizePtr, int callbackOrFlags);
-void *LOAD_DramFile(void *bigfilePtr, int subfileIndex, void *ptrDestination, int *sizePtr, int callbackOrFlags);
+void *LOAD_VramFile(void *bigfilePtr, int subfileIndex, void *ptrDestination, u32 *sizePtr, int callbackOrFlags);
+void *LOAD_DramFile(void *bigfilePtr, int subfileIndex, void *ptrDestination, u32 *sizePtr, int callbackOrFlags);
 void *LOAD_ReadDirectory(char *filename);
 void *LOAD_XnfFile(char *filename, void *ptrDestination, int *size);
 int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *bigfile);
@@ -397,8 +397,8 @@ void RenderStars(struct PushBuffer *pb, struct PrimMem *primMem, struct Stars *s
 void RenderWeather(struct PushBuffer *pb, struct PrimMem *primMem, struct RainBuffer *rainBuffer, char numPlyr, int gameMode1);
 void DrawConfetti(struct PushBuffer *pb, struct PrimMem *primMem, void *confetti, int frameTimer, int gameMode1);
 void RedBeaker_RenderRain(struct PushBuffer *pb, struct PrimMem *primMem, struct JitPool *rain, char numPlyr, int gameMode1);
-void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, uint32_t *otMem, void *rbi, char *lod, char numPlyr, int gameMode1);
-void *RenderBucket_QueueNonLevInstances(struct Item *item, uint32_t *otMem, void *rbi, char *lod, char numPlyr, int gameMode1);
+void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, struct OTMem *otMem, void *rbi, u32 lodMask, char numPlyr, int gameMode1);
+void *RenderBucket_QueueNonLevInstances(struct Item *item, struct OTMem *otMem, void *rbi, u32 lodMask, char numPlyr, int gameMode1);
 void RenderBucket_Execute(void *param_1, struct PrimMem *param_2);
 void DrawTires_Solid(struct Thread *thread, struct PrimMem *primMem, char numPlyr);
 void DrawTires_Reflection(struct Thread *thread, struct PrimMem *primMem, char numPlyr);
@@ -563,7 +563,7 @@ int RECTMENU_ProcessInput(struct RectMenu *m);
 void RECTMENU_DrawOuterRect_Edge(RECT *r, Color color, u32 param_3, uint32_t *otMem);
 void RECTMENU_DrawOuterRect_HighLevel(RECT *r, Color color, s16 param_3, uint32_t *otMem);
 void RECTMENU_DrawOuterRect_LowLevel(RECT *p, s16 xOffset, u16 yOffset, Color color, s16 param_5, uint32_t *otMem);
-u8 *RECTMENU_DrawTime(int milliseconds);
+char *RECTMENU_DrawTime(int milliseconds);
 void RECTMENU_DrawRwdBlueRect_Subset(s16 *pos, int *color, uint32_t *ot, struct PrimMem *primMem);
 void RECTMENU_DrawRwdBlueRect(RECT *rect, char *metas, uint32_t *ot, struct PrimMem *primMem);
 void RECTMENU_DrawRwdTriangle(s16 *position, char *color, uint32_t *otMem, struct PrimMem *primMem);
@@ -575,7 +575,7 @@ void RECTMENU_Show(struct RectMenu *m);
 int MixRNG_Scramble(void);
 int MixRNG_Particles(int param_1);
 u32 MixRNG_GetValue(int param_1);
-int RngDeadCoed(u32 *state);
+int RngDeadCoed(struct RngDeadCoedState *state);
 
 void MainStats_ClearBattleVS(void);
 void MainStats_RestartRaceCountLoss(void);
@@ -696,7 +696,7 @@ void UI_SaveLapTime(int numLaps, int lapTime, s16 driverID);
 void UI_Map_GetIconPos(s16 *m, int *posX, int *posY);
 void UI_Map_DrawMap(struct Icon *mapTop, struct Icon *mapBottom, s16 posX, s16 posY, struct PrimMem *primMem, uint32_t *otMem, u32 colorID);
 
-void UI_Lerp2D_Angular(s16 *ptrPos, s16 drawnPosition, s16 absolutePosition, s16 frameCounter);
+void UI_Lerp2D_Angular(SVec2 *pos, s16 drawnPosition, s16 absolutePosition, s16 frameCounter);
 void UI_Lerp2D_Linear(s16 *ptrPos, s16 startX, s16 startY, s16 endX, s16 endY, int curFrame, s16 endFrame);
 void UI_Lerp2D_HUD(s16 *ptrPos, s16 startX, s16 startY, s16 endX, s16 endY, int curFrame, s16 endFrame);
 

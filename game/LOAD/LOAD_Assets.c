@@ -282,7 +282,7 @@ static int LOAD_LangFile_Loose(int lang)
 void LOAD_LangFile(int bigfilePtr, int lang)
 {
 	struct LngFile *lngFile;
-	int size;
+	u32 size;
 
 	int i;
 	int numStrings;

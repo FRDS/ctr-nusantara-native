@@ -42,8 +42,8 @@ static struct NativeReplaySchedulerFrameInfo MainReplayScheduler_FrameInfo(struc
 	info.levelID = gGT->levelID;
 	info.mixRandomNumber = (u32)sdata->randomNumber;
 	info.audioRNG = sdata->audioRNG;
-	info.deadcoed0 = (u32)gGT->deadcoed_struct.unk1;
-	info.deadcoed1 = (u32)gGT->deadcoed_struct.unk2;
+	info.deadcoed0 = (u32)gGT->deadcoed_struct.state0;
+	info.deadcoed1 = (u32)gGT->deadcoed_struct.state1;
 	info.advRng0 = (u32)sdata->const_0x30215400;
 	info.advRng1 = (u32)sdata->const_0x493583fe;
 
@@ -506,7 +506,7 @@ u32 main(void)
 void StateZero()
 {
 	u16 *clockEffect;
-	int vramSize;
+	u32 vramSize;
 
 	struct GameTracker *gGT;
 	gGT = sdata->gGT;

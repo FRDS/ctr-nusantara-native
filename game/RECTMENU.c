@@ -30,7 +30,7 @@ static const char s_rectMenuTimeFormat[] = "%ld:%ld%ld:%ld%ld";
 #endif
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80044ff8-0x80045134.
-u8 *RECTMENU_DrawTime(int milliseconds)
+char *RECTMENU_DrawTime(int milliseconds)
 {
 	// 32 is added to milliseconds every frame,
 	// 960 per second, the rest is basic math
@@ -53,7 +53,7 @@ u8 *RECTMENU_DrawTime(int milliseconds)
 	    CTR_PRINTF_PSX_LONG(((milliseconds * 100) / 0x3c0) % 10) // milliseconds
 	);
 
-	return (u8 *)str;
+	return str;
 }
 
 #undef RECTMENU_TIME_FORMAT
@@ -68,20 +68,18 @@ void RECTMENU_DrawRwdBlueRect_Subset(s16 *pos, int *color, uint32_t *ot, struct 
 	{
 		primMem->cursor = p + 1;
 
-		*(int *)&p->r0 = color[0] & 0xffffff;
-		*(int *)&p->r1 = color[1] & 0xffffff;
-		*(int *)&p->r2 = color[2] & 0xffffff;
-		*(int *)&p->r3 = color[3] & 0xffffff;
+		CtrGpu_WriteColorCode(&p->r0, (color[0] & 0xffffff) | 0x38000000);
+		CtrGpu_WriteColorCode(&p->r1, color[1] & 0xffffff);
+		CtrGpu_WriteColorCode(&p->r2, color[2] & 0xffffff);
+		CtrGpu_WriteColorCode(&p->r3, color[3] & 0xffffff);
 
-		p->code = 0x38;
+		CtrGpu_WritePackedXY(&p->x0, CTR_ReadU32LE(&pos[0]));
+		CtrGpu_WritePackedXY(&p->x1, (pos[0] + pos[2]) | ((u32)pos[1] << 16));
+		CtrGpu_WritePackedXY(&p->x2, pos[0] | ((u32)(pos[1] + pos[3]) << 16));
+		CtrGpu_WritePackedXY(&p->x3, (pos[0] + pos[2]) | ((u32)(pos[1] + pos[3]) << 16));
 
-		*(int *)&p->x0 = *(int *)&pos[0];
-		*(int *)&p->x1 = (pos[0] + pos[2]) | (pos[1] << 16);
-		*(int *)&p->x2 = pos[0] | ((pos[1] + pos[3]) << 16);
-		*(int *)&p->x3 = (pos[0] + pos[2]) | ((pos[1] + pos[3]) << 16);
-
-		*(int *)p = CtrGpu_PackOTTag(*ot, 0x8000000);
-		*(int *)ot = (int)CtrGpu_PrimToOTLink24(p);
+		p->tag = CtrGpu_PackOTTag(*ot, 0x8000000);
+		*ot = CtrGpu_PrimToOTLink24(p);
 	}
 }
 
@@ -239,8 +237,8 @@ void RECTMENU_DrawQuip(char *comment, s16 startX, int startY, u32 sizeX, s16 fon
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800457b0-0x800459ec.
 void RECTMENU_DrawInnerRect(RECT *r, int type, uint32_t *ot)
 {
-	int *colorDataNormal;
-	int *colorDataSpecial;
+	u32 *colorDataNormal;
+	u32 *colorDataSpecial;
 	int drawMode;
 	RECT adjustedRect;
 
@@ -281,8 +279,8 @@ void RECTMENU_DrawInnerRect(RECT *r, int type, uint32_t *ot)
 		}
 		else
 		{
-			Color *color = (Color *)&sdata->DrawSolidBoxData[0];
-			CTR_Box_DrawSolidBox(&adjustedRect, *color, ot);
+			Color color = {.self = sdata->DrawSolidBoxData[0]};
+			CTR_Box_DrawSolidBox(&adjustedRect, color, ot);
 		}
 	}
 
@@ -296,7 +294,7 @@ void RECTMENU_DrawInnerRect(RECT *r, int type, uint32_t *ot)
 		adjustedRect.w = horizontalOffset;
 		adjustedRect.h = r->h;
 
-		int *color = &sdata->DrawSolidBoxData[0];
+		u32 *color = &sdata->DrawSolidBoxData[0];
 		CTR_Box_DrawClearBox(&adjustedRect, (Color *)color, 0, ot);
 
 		adjustedRect.x = r->x + horizontalOffset;
@@ -755,7 +753,7 @@ int RECTMENU_ProcessInput(struct RectMenu *m)
 
 	int returnVal = 0;
 
-	RngDeadCoed(&sdata->const_0x30215400);
+	RngDeadCoed(&sdata->advRng);
 
 	// button from any player
 	button = sdata->AnyPlayerTap;
@@ -910,7 +908,6 @@ int RECTMENU_ProcessInput(struct RectMenu *m)
 void RECTMENU_ProcessState()
 {
 	struct RectMenu *currMenu;
-	int currState;
 	s16 width;
 	int state;
 

@@ -13,8 +13,6 @@ void RB_Bubbles_RoosTubes()
 	int numFreeParticles;
 	struct Particle *p;
 	struct Driver *d;
-	SVec3 posCurr;
-	SVec3 posPrev;
 	int velX;
 	int velZ;
 	int i;
@@ -216,7 +214,7 @@ struct ParticleEmitter emSet_TubeBubbles[7] = {[0] =
                                                    },
 
                                                // null terminator
-                                               [6] = {}
+                                               [6] = {0}
 
 #if 0
 	// original had [6], [7], [8], and [9]

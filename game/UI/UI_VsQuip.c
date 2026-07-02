@@ -519,16 +519,16 @@ void UI_VsQuipDrawAll(void)
 
 // Retail 0x800116ec: Battle end stat positions for 3P/4P.
 static const SVec2 s_battleStatsPos3P4P[4] = {
-    {0x55, 0x35},
-    {0xaa, 0x35},
-    {0x55, 0x43},
-    {0xaa, 0x43},
+    {{0x55, 0x35}},
+    {{0xaa, 0x35}},
+    {{0x55, 0x43}},
+    {{0xaa, 0x43}},
 };
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800552a4-0x8005572c.
 void UI_VsWaitForPressX(void)
 {
-	char i, j;
+	s32 i, j;
 	u8 numAttacked;
 	s16 sVar4;
 	int string;

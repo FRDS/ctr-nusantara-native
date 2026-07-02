@@ -250,7 +250,7 @@ void SelectProfile_Init(u16 flags)
 		// unpatched until a valid menu repro proves the allocation can fail.
 		obj = (struct SelectProfileLoadSaveObj *)t->object;
 		sdata->ptrLoadSaveObj = (int)obj;
-		obj->icons = (struct SelectProfileLoadSaveIcon *)&sdata->LoadSaveData[0];
+		obj->icons = &sdata->LoadSaveData[0];
 		memset(obj->icons, 0, sizeof(sdata->LoadSaveData));
 
 		if (obj == NULL)
@@ -312,11 +312,7 @@ void SelectProfile_Init(u16 flags)
 					icon->rot.y = 0;
 					icon->rot.z = data.spinOffset_LoadSave[slot];
 
-					*(int *)&inst->matrix.m[0][0] = 0x1000;
-					*(int *)&inst->matrix.m[0][2] = 0;
-					*(int *)&inst->matrix.m[1][1] = 0x1000;
-					*(int *)&inst->matrix.m[2][0] = 0;
-					inst->matrix.m[2][2] = 0x1000;
+					CTR_MatrixSetRotIdentity(&inst->matrix);
 				}
 			}
 		}
@@ -411,7 +407,8 @@ void SelectProfile_DrawGhostProfile(struct GhostProfile *profile, int posX, int 
 	if (isUnavailable != 0)
 	{
 		DecalFont_DrawLine(sdata->lngStrings[LNG_NOT_AVAILABLE], posX + 0x64, posY + 0x11, FONT_SMALL, 0xffff8016);
-		CTR_Box_DrawClearBox(&innerRect, (Color *)&sdata->redColor, ADD_DECAL, gGT->backBuffer->otMem.uiOT);
+		Color redColor = {.self = (u32)sdata->redColor};
+		CTR_Box_DrawClearBox(&innerRect, &redColor, ADD_DECAL, gGT->backBuffer->otMem.uiOT);
 	}
 
 	if (profile != NULL)
@@ -1038,7 +1035,7 @@ static int SelectProfile_HandleSelection(struct RectMenu *menu, int rowCount)
 		return 0;
 	}
 
-	if ((*(s16 *)&sdata->unk8008d95c == 0) && (*(s16 *)&sdata->unk_memcardRelated_8008d928[0] == 0))
+	if (((s16)CTR_ReadU16LE(&sdata->unk8008d95c) == 0) && ((s16)CTR_ReadU16LE(&sdata->unk_memcardRelated_8008d928[0]) == 0))
 	{
 		return 0;
 	}
@@ -1133,7 +1130,7 @@ static void SelectProfile_DrawMemcardMessage(int screen, int color, int menuFlag
 	firstString = descriptor & 0xffff;
 	multiLine = (descriptor >> 16) & 0xffff;
 
-	if ((*SelectProfile_AllProfiles_ActionActive() != 0) && (*(s16 *)&sdata->unk8008d964 != 0))
+	if ((*SelectProfile_AllProfiles_ActionActive() != 0) && ((s16)CTR_ReadU16LE(&sdata->unk8008d964) != 0))
 	{
 		firstString = 0xffff;
 	}
@@ -1184,9 +1181,9 @@ static void SelectProfile_DrawMemcardMessage(int screen, int color, int menuFlag
 
 static void SelectProfile_DrawAll(struct RectMenu *menu, int rowCount, int savedGhostCount, b32 canChooseEmptySlot, int color)
 {
-	b32 canDrawProfiles =
-	    (*SelectProfile_AllProfiles_ActionActive() == 0) &&
-	    ((*(s16 *)&sdata->unk8008d95c != 0) || (*(s16 *)&sdata->unk_memcardRelated_8008d928[0] != 0) || (sdata->mcScreenText == MC_SCREEN_NULL));
+	b32 canDrawProfiles = (*SelectProfile_AllProfiles_ActionActive() == 0) &&
+	                      (((s16)CTR_ReadU16LE(&sdata->unk8008d95c) != 0) || ((s16)CTR_ReadU16LE(&sdata->unk_memcardRelated_8008d928[0]) != 0) ||
+	                       (sdata->mcScreenText == MC_SCREEN_NULL));
 
 	if ((sdata->memcardAction == 0) && SelectProfile_IsGhostMode() &&
 	    ((sdata->mcScreenText == MC_SCREEN_ERROR_NODATA) || (sdata->mcScreenText == MC_SCREEN_WARNING_NOCARD)) && (rowCount != 0))
@@ -1240,8 +1237,9 @@ static void SelectProfile_DrawAll(struct RectMenu *menu, int rowCount, int saved
 	{
 		*SelectProfile_AllProfiles_OverwritePrompt() = 0;
 
-		if ((*SelectProfile_AllProfiles_ActionActive() != 0) && (*(s16 *)&sdata->unk8008d964 != 0) && (*SelectProfile_AllProfiles_ExitToPrevious() == 0) &&
-		    (*SelectProfile_AllProfiles_ActionDone() == 0) && (*SelectProfile_AllProfiles_TimerSaveComplete() != 0))
+		if ((*SelectProfile_AllProfiles_ActionActive() != 0) && ((s16)CTR_ReadU16LE(&sdata->unk8008d964) != 0) &&
+		    (*SelectProfile_AllProfiles_ExitToPrevious() == 0) && (*SelectProfile_AllProfiles_ActionDone() == 0) &&
+		    (*SelectProfile_AllProfiles_TimerSaveComplete() != 0))
 		{
 			int saveColor = ((sdata->frameCounter & 4) == 0) ? (JUSTIFY_CENTER | ORANGE) : (JUSTIFY_CENTER | WHITE);
 			DecalFont_DrawLine(sdata->lngStrings[LNG_SAVE_COMPLETED], 0x108, 0x64, FONT_BIG, saveColor);
@@ -1265,13 +1263,14 @@ static int SelectProfile_ShouldFinalize(void)
 		return 0;
 	}
 
-	if ((*(s16 *)&sdata->unk8008d964 == 0) && (*SelectProfile_AllProfiles_ExitToPrevious() == 0) && (*SelectProfile_AllProfiles_ActionDone() == 0))
+	if (((s16)CTR_ReadU16LE(&sdata->unk8008d964) == 0) && (*SelectProfile_AllProfiles_ExitToPrevious() == 0) && (*SelectProfile_AllProfiles_ActionDone() == 0))
 	{
 		return 0;
 	}
 
-	if ((*SelectProfile_AllProfiles_ActionActive() != 0) && (*(s16 *)&sdata->unk8008d964 != 0) && (*SelectProfile_AllProfiles_ExitToPrevious() == 0) &&
-	    (*SelectProfile_AllProfiles_ActionDone() == 0) && (*SelectProfile_AllProfiles_TimerSaveComplete() != 0))
+	if ((*SelectProfile_AllProfiles_ActionActive() != 0) && ((s16)CTR_ReadU16LE(&sdata->unk8008d964) != 0) &&
+	    (*SelectProfile_AllProfiles_ExitToPrevious() == 0) && (*SelectProfile_AllProfiles_ActionDone() == 0) &&
+	    (*SelectProfile_AllProfiles_TimerSaveComplete() != 0))
 	{
 		(*SelectProfile_AllProfiles_TimerSaveComplete())--;
 		return 0;
@@ -1464,8 +1463,9 @@ void SelectProfile_AllProfiles_MenuProc(struct RectMenu *menu)
 					RefreshCard_StartMemcardAction(7);
 				}
 			}
-			else if (((sdata->memoryCard_SizeRemaining >= 0x1680) || (*(s16 *)&sdata->unk_memcardRelated_8008d928[0] != 0) || (sdata->memcardAction != 1)) &&
-			         ((*(s16 *)&sdata->unk8008d95c != 0) || (*(s16 *)&sdata->unk_memcardRelated_8008d928[0] != 0)))
+			else if (((sdata->memoryCard_SizeRemaining >= 0x1680) || ((s16)CTR_ReadU16LE(&sdata->unk_memcardRelated_8008d928[0]) != 0) ||
+			          (sdata->memcardAction != 1)) &&
+			         (((s16)CTR_ReadU16LE(&sdata->unk8008d95c) != 0) || ((s16)CTR_ReadU16LE(&sdata->unk_memcardRelated_8008d928[0]) != 0)))
 			{
 				if (sdata->boolSaveCupProgress == 0)
 				{

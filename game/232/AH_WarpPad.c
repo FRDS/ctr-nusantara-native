@@ -57,7 +57,7 @@ void AH_WarpPad_AllWarppadNum()
 
 	struct Thread *t = sdata->gGT->threadBuckets[WARPPAD].thread;
 
-	for (t; t != 0; t = t->siblingThread)
+	for (; t != 0; t = t->siblingThread)
 	{
 		wp = t->object;
 
@@ -170,7 +170,6 @@ SpinReward:
 void AH_WarpPad_ThTick(struct Thread *t)
 {
 	int i;
-	int j;
 	b32 boolOpen;
 	struct GameTracker *gGT;
 	struct WarpPad *warppadObj;
@@ -515,14 +514,14 @@ void AH_WarpPad_ThTick(struct Thread *t)
 
 		for (i = 0; i < 7; i++)
 		{
-			rng1 = RngDeadCoed(&sdata->const_0x30215400);
+			rng1 = RngDeadCoed(&sdata->advRng);
 
 			rng2 = 7 - i;
 
 			rng2 = (rng1 & 0xfff) % rng2 + 1;
 			rng2 = (s16)rng2;
 
-			sdata->kartSpawnOrderArray[randKartSpawn[rng2]] = (char)i;
+			sdata->kartSpawnOrderArray[(s32)randKartSpawn[rng2]] = (char)i;
 
 			while (rng2 < 7)
 			{

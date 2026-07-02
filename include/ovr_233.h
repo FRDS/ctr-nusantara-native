@@ -115,22 +115,30 @@ union CsOpcodeArg
 	char *ptr;
 };
 
-struct CsOpcodeMeta
+union CsOpcodeMeta
 {
-	s16 opcode;
-	s16 animIndex;
-	s16 frameStart;
-	s16 frameEnd;
-	union CsOpcodeArg arg0; // shorts 4/5
-	union CsOpcodeArg arg1; // shorts 6/7
-	s16 rotStart;
-	s16 rotEnd;
+	struct
+	{
+		s16 opcode;
+		s16 animIndex;
+		s16 frameStart;
+		s16 frameEnd;
+		union CsOpcodeArg arg0; // shorts 4/5
+		union CsOpcodeArg arg1; // shorts 6/7
+		s16 rotStart;
+		s16 rotEnd;
+	};
+
+	int words[5];
+	s16 shorts[10];
 };
 
 enum CutsceneObjFlags
 {
 	CS_FLAG_PATH_MOTION_DISABLED = 0x0001,
 };
+
+struct Ovr233InitMatrixTableEntry;
 
 struct CutsceneObj
 {
@@ -152,7 +160,12 @@ struct CutsceneObj
 	s16 unk_E;
 
 	// 0x10
-	int *metadata;
+	union
+	{
+		int *metadata;
+		union CsOpcodeMeta *metadataMeta;
+		s16 *metadataShorts;
+	};
 
 	// 0x14
 	s16 opcodeDuration;
@@ -208,14 +221,14 @@ struct CutsceneObj
 	u8 animIndex;
 
 	// 0x48
-	int *frameOverrideRoot;
+	struct Ovr233InitMatrixTableEntry *frameOverrideRoot;
 
 	// 0x4c
-	struct CsOpcodeMeta decodedOpcode;
+	union CsOpcodeMeta decodedOpcode;
 };
 
 #ifndef CTR_NATIVE
-CTR_STATIC_ASSERT(sizeof(struct CsOpcodeMeta) == 0x14);
+CTR_STATIC_ASSERT(sizeof(union CsOpcodeMeta) == 0x14);
 CTR_STATIC_ASSERT(OFFSETOF(struct CutsceneObj, frameOverrideRoot) == 0x48);
 CTR_STATIC_ASSERT(OFFSETOF(struct CutsceneObj, decodedOpcode) == 0x4c);
 CTR_STATIC_ASSERT(sizeof(struct CutsceneObj) == 0x60);
@@ -285,15 +298,39 @@ struct BossCutsceneData
 struct CsInitMatrixEntry
 {
 	s16 offset[4];
-	s16 rotScaleOrMatrix[10];
+	union
+	{
+		s16 rotScaleOrMatrix[10];
+		struct
+		{
+			SVec3 rot;
+			s16 rotPad;
+			SVec3 scale;
+			s16 scalePad;
+			s16 matrixTail[2];
+		};
+	};
 	s16 pad[2];
 };
 
 CTR_STATIC_ASSERT(sizeof(struct CsInitMatrixEntry) == 0x20);
 
+typedef struct CTR_MAY_ALIAS CsInitMatrixOverlap
+{
+	s16 m[3][3];
+	Vec3 t;
+} CsInitMatrixOverlap;
+
+CTR_STATIC_ASSERT(sizeof(CsInitMatrixOverlap) == sizeof(MATRIX));
+
+force_inline CsInitMatrixOverlap *CsInitMatrixEntry_GetMatrix(struct CsInitMatrixEntry *entry)
+{
+	return (CsInitMatrixOverlap *)&entry->rotScaleOrMatrix[0];
+}
+
 struct Ovr233InitMatrixTableEntry
 {
-	void *data;
+	struct CsInitMatrixEntry *data;
 	int count;
 };
 
@@ -652,7 +689,7 @@ struct OVR233_Garage
 	int unusedArr_Colors[3];
 
 	// 800b861c
-	int barColors[7];
+	u32 barColors[7];
 
 	// 800b8638
 	s16 numFramesCurr_GarageMove;

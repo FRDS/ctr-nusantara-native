@@ -9,7 +9,7 @@ int CDSYS_Init(b32 boolUseDisc)
 {
 	sdata->boolUseDisc = boolUseDisc;
 
-	*(s16 *)&sdata->unused400[0] = 0;
+	CTR_WriteU16LE(&sdata->unused400[0], 0);
 
 	// if using parallel port (Naughty Dog Devs only)
 	if (boolUseDisc != 0)
@@ -85,7 +85,7 @@ u32 CDSYS_GetFilePosInt(char *fileString, int *filePos)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8001c470-0x8001c4f4.
 void CDSYS_SetMode_StreamData()
 {
-	char buf[8];
+	u8 buf[8];
 
 #if defined(CTR_NATIVE)
 	// NOTE(aalhendi): Native has no disc-mode switch, but retail force-stops
@@ -143,7 +143,7 @@ void CDSYS_SetMode_StreamData()
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8001c4f4-0x8001c56c.
 void CDSYS_SetMode_StreamAudio()
 {
-	char buf[8];
+	u8 buf[8];
 
 	if (sdata->boolUseDisc == 0)
 	{
@@ -214,7 +214,7 @@ int CDSYS_SetXAToLang(int lang)
 	}
 
 	// header error
-	if (xnf->magic != *(int *)&sdata->s_XINF[0])
+	if (xnf->magic != (s32)CTR_ReadU32LE(&sdata->s_XINF[0]))
 	{
 		return 0;
 	}
@@ -244,8 +244,8 @@ int CDSYS_SetXAToLang(int lang)
 
 		for (int xaID = 0; xaID < sdata->ptrArray_NumXAs[categoryID]; xaID++)
 		{
-			am->name[am->stringIndex_char1] = '0' + (xaID / 10);
-			am->name[am->stringIndex_char2] = '0' + (xaID % 10);
+			am->name[(s32)am->stringIndex_char1] = '0' + (xaID / 10);
+			am->name[(s32)am->stringIndex_char2] = '0' + (xaID % 10);
 
 			int firstXaIndex = sdata->ptrArray_firstXaIndex[categoryID];
 			int *returnPtr_xaCdPos = &sdata->ptrArray_XaCdPos[firstXaIndex + xaID];
@@ -673,8 +673,8 @@ int CDSYS_XAGetTrackLength(int categoryID, int xaID)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8001cdb4-0x8001cf98
 int CDSYS_XAPlay(int categoryID, int xaID)
 {
-	char buf1[8];
-	char buf2[8];
+	u8 buf1[8];
+	u8 buf2[8];
 
 	if (sdata->boolUseDisc == 0)
 	{

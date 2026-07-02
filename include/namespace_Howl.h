@@ -34,6 +34,24 @@ CTR_STATIC_ASSERT(sizeof(AudioState) == 0x2);
 CTR_STATIC_ASSERT(AUDIO_NONE == 0);
 CTR_STATIC_ASSERT(AUDIO_RACE_END == 16);
 
+struct VoicelineItem
+{
+	// 0x0
+	struct Item item;
+
+	// 0x8
+	s16 voiceID;
+
+	// 0xa
+	u8 characterID;
+
+	// 0xb
+	u8 secondaryCharacterID;
+
+	// 0xc
+	s32 startFrame;
+};
+
 enum HowlSfxParam
 {
 	HOWL_SFX_LR_SHIFT = 0,
@@ -149,11 +167,20 @@ struct ChannelAttr
 // similar to SndVoiceStats in psyq libsnd.h
 struct ChannelStats
 {
-	// 0x0
-	struct ChannelStats *next;
+	union
+	{
+		// 0x0
+		struct Item item;
 
-	// 0x4
-	struct ChannelStats *prev;
+		struct
+		{
+			// 0x0
+			struct ChannelStats *next;
+
+			// 0x4
+			struct ChannelStats *prev;
+		};
+	};
 
 	// 0x8
 	u8 flags;
@@ -226,7 +253,7 @@ struct GarageFX
 	int LR;
 
 	// 0x8
-	void *audioPtr;
+	u32 soundIDCount;
 
 	// 0xC - size of each member
 };
@@ -569,6 +596,7 @@ enum VoiceType_XAGAME2
 #endif
 
 CTR_STATIC_ASSERT(sizeof(SpuReverbAttr) == 0x14);
+CTR_STATIC_ASSERT(sizeof(struct VoicelineItem) == 0x10);
 CTR_STATIC_ASSERT(sizeof(struct ChannelAttr) == 0x10);
 CTR_STATIC_ASSERT(sizeof(struct ChannelStats) == 0x20);
 CTR_STATIC_ASSERT(sizeof(struct SongSeq) == 0x1C);

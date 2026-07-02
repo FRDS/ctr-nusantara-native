@@ -87,7 +87,7 @@ void MainFrame_ResetDB(struct GameTracker *gGT)
 		gGT->pushBuffer[iVar4].ptrOT = (uint32_t *)((int)otSwapchainDB + (sdata->gGT->numPlyrCurrGame - iVar4 - 1) * 0x1000 + 0x18);
 	}
 
-	for (iVar4; iVar4 < 4; iVar4++)
+	for (; iVar4 < 4; iVar4++)
 	{
 		// but why?
 		gGT->pushBuffer[iVar4].ptrOT = (uint32_t *)((int)otSwapchainDB + 3 * 0x1000 + 0x18);
@@ -126,12 +126,9 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 	int iVar4;
 	DriverFunc pcVar5;
 	u32 uVar5;
-	u32 uVar6;
-	int *piVar7;
 	struct Driver *psVar8;
 	struct Driver *psVar9;
 	struct Driver *psVar10;
-	struct Driver *pvVar12;
 	struct PushBuffer *pushBuffer;
 	int iVar11;
 	struct Thread *psVar12;

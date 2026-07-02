@@ -293,13 +293,11 @@ void MainInit_Drivers(struct GameTracker *gGT)
 	char i;
 	char numPlyrCurrGame = gGT->numPlyrCurrGame;
 	u8 numDrivers;
-	u32 uVar3;
 	int gameMode = gGT->gameMode1;
-	struct Driver *d;
 
 	for (i = 0; i < 8; i++)
 	{
-		gGT->drivers[i] = NULL;
+		gGT->drivers[(s32)i] = NULL;
 	}
 
 	gGT->numBotsNextGame = 0;
@@ -321,7 +319,7 @@ void MainInit_Drivers(struct GameTracker *gGT)
 	// because of threadBucket linked list order
 	for (i = numPlyrCurrGame - 1; i >= 0; i--)
 	{
-		gGT->drivers[i] = VehBirth_Player(i);
+		gGT->drivers[(s32)i] = VehBirth_Player(i);
 	}
 
 	// spawn all AIs
@@ -388,7 +386,7 @@ void MainInit_Drivers(struct GameTracker *gGT)
 		// fill up 4 players
 		for (i = numPlyrCurrGame; i < 4; i++)
 		{
-			gGT->drivers[i] = VehBirth_Player(i);
+			gGT->drivers[(s32)i] = VehBirth_Player(i);
 		}
 	}
 
@@ -416,7 +414,6 @@ void MainInit_FinalizeInit(struct GameTracker *gGT)
 {
 	int i;
 	int numPlyr;
-	u8 *puVar3;
 	struct Driver *d;
 	struct Level *lev1;
 	struct Instance *inst;
@@ -450,8 +447,8 @@ void MainInit_FinalizeInit(struct GameTracker *gGT)
 
 	// deadc0ed, FUN_8006c684
 	// RNG stuff
-	gGT->deadcoed_struct.unk1 = 0x30215400;
-	gGT->deadcoed_struct.unk2 = 0x493583fe;
+	gGT->deadcoed_struct.state0 = 0x30215400;
+	gGT->deadcoed_struct.state1 = 0x493583fe;
 
 	for (i = 0; i < 12; i++)
 	{
@@ -705,11 +702,11 @@ void MainInit_VRAMClear()
 	commands.d = 0;
 	commands.e = 0x3ff;
 	commands.f = 0x1ff;
-	DrawOTag((u32 *)&commands);
+	DrawOTag(&commands);
 
 	commands.d = 0x1ff;
 	commands.f = 1;
-	DrawOTag((u32 *)&commands);
+	DrawOTag(&commands);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003c310-0x8003c41c; native wraps
@@ -741,7 +738,7 @@ void MainInit_VRAMDisplay()
 
 			move.tag |= 0xffffff;
 
-			DrawOTag((u32 *)&move);
+			DrawOTag(&move);
 			DrawSync(0);
 		}
 	}

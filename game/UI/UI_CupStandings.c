@@ -108,8 +108,6 @@ void UI_CupStandings_InputAndDraw(void)
 	// Too many variables, many reused registers
 	// same variable names used for different purposes
 	struct GameTracker *gGT;
-	s16 sVar1;
-	u16 uVar2;
 	s16 sVar5;
 	int i;
 	int framesPassed;
@@ -128,7 +126,7 @@ void UI_CupStandings_InputAndDraw(void)
 	int numDrivers;
 	s16 sVar18;
 
-	u16 local_58[2];
+	s16 local_58[2];
 
 	gGT = sdata->gGT;
 
@@ -319,7 +317,6 @@ void UI_CupStandings_InputAndDraw(void)
 				uVar9 = 0x42;
 				if (3 < i)
 				{
-					sVar1 = rectW;
 					sVar5 = sVar5 + -4;
 					goto LAB_800568b8;
 				}

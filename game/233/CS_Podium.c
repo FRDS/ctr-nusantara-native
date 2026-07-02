@@ -126,7 +126,7 @@ void CS_Podium_Prize_Spin(struct Instance *inst, s16 *prize)
 		s16 sine1;
 		s16 cos1;
 
-		trigApprox = *(u32 *)&data.trigApprox[angle & 0x3ff];
+		trigApprox = CTR_ReadU32LE(&data.trigApprox[angle & 0x3ff]);
 		if ((angle & 0x400) == 0)
 		{
 			cos1 = (s16)(trigApprox >> 16);
@@ -155,7 +155,7 @@ void CS_Podium_Prize_Spin(struct Instance *inst, s16 *prize)
 		s16 sine2;
 		s16 cos2;
 
-		trigApprox = *(u32 *)&data.trigApprox[angle & 0x3ff];
+		trigApprox = CTR_ReadU32LE(&data.trigApprox[angle & 0x3ff]);
 		if ((angle & 0x400) == 0)
 		{
 			cos2 = (s16)(trigApprox >> 16);
@@ -557,6 +557,7 @@ void CS_Podium_FullScene_Init(void)
 	struct Thread *victoryCamThread;
 	u32 podiumMusic;
 	struct CsThreadInitData InitData = {0};
+	MATRIX podiumMatrix;
 
 	struct SpawnPosRot *posRot;
 
@@ -619,9 +620,9 @@ void CS_Podium_FullScene_Init(void)
 	InitData.rot.z = posRot->rot.z;
 
 	// convert 3 rotation shorts into rotation matrix
-	ConvertRotToMatrix((MATRIX *)&InitData.local_30, &InitData.rot.vec);
+	ConvertRotToMatrix(&podiumMatrix, &InitData.rot.vec);
 	// Move position of trophy girl
-	gte_SetLightMatrix(&InitData.local_30);
+	gte_SetLightMatrix(&podiumMatrix);
 
 	// CameraDC, this makes the camera stop following you as it does while racing, it must be zero to follow you
 	gGT->cameraDC[0].cameraMode = 3;
